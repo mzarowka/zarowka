@@ -1,9 +1,8 @@
 #' Update packages with pak
 #'
-#' @returns
+#' @returns NULL
 #'
 #' @export
-#' @examples
 zar_update <- function() {
   pak::pkg_install(unname(utils::old.packages()[, "Package"]))
 }

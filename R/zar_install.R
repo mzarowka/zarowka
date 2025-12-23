@@ -1,9 +1,8 @@
 #' Install Maury's choince of packages with pak
 #'
-#' @returns
+#' @returns NULL
 #'
 #' @export
-#' @examples
 zar_install <- function() {
   # Define packages
   packages <- c(

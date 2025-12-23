@@ -1,9 +1,8 @@
 #' Install pak and purrr before using zar_install
 #'
-#' @returns
+#' @returns NULL
 #'
 #' @export
-#' @examples
 zar_set <- function() {
   # Install pak
   install.packages("pak")
