@@ -84,7 +84,9 @@ zar_install <- function() {
     "pangear",
     "rnaturalearth",
     "ggtern",
-    "S7"
+    "S7",
+    "bundle",
+    "vip"
   )
 
   # Install packages
