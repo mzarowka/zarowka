@@ -3,4 +3,6 @@
 export(zar_hsitools)
 export(zar_install)
 export(zar_set)
+export(zar_template_swir)
+export(zar_template_vnir)
 export(zar_update)
