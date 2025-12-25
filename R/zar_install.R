@@ -86,7 +86,9 @@ zar_install <- function() {
     "ggtern",
     "S7",
     "bundle",
-    "vip"
+    "vip",
+    "plsmod",
+    "svglite"
   )
 
   # Install packages
