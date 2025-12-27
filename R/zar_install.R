@@ -88,7 +88,8 @@ zar_install <- function() {
     "bundle",
     "vip",
     "plsmod",
-    "svglite"
+    "svglite",
+    "supercells"
   )
 
   # Install packages
