@@ -90,7 +90,8 @@ zar_install <- function() {
     "plsmod",
     "svglite",
     "supercells",
-    "glmnet"
+    "glmnet",
+    "leaflet"
   )
 
   # Install packages
