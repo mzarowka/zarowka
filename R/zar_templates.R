@@ -42,7 +42,7 @@
 #' @param overwrite Overwrite existing file? Default FALSE
 #' @export
 zar_template_swir <- function(path, overwrite = FALSE) {
-  .use_template("template_swir.R", path, overwrite)
+  .use_template("reflectance_swir.R", path, overwrite)
 }
 
 
@@ -51,5 +51,5 @@ zar_template_swir <- function(path, overwrite = FALSE) {
 #' @param overwrite Overwrite existing file? Default FALSE
 #' @export
 zar_template_vnir <- function(path, overwrite = FALSE) {
-  .use_template("template_vnir.R", path, overwrite)
+  .use_template("reflectance_vnir.R", path, overwrite)
 }

@@ -77,6 +77,7 @@ reflectance <- HSItools::hsi_calc_reflectance(
   whiteref = data$whiteref,
   darkref = data$darkref,
   tint = c(tintw, tints),
+  in_memory = TRUE,
   filename = products(".tif")
 )
 
@@ -98,7 +99,7 @@ tidyr::crossing(type = c("RGB", "CIR", "NIR"), ext = c(".tif", ".png")) |>
         reflectance <- terra::rast(reflectance_path)
 
         # Stretch raster by type and extension
-        HSItools::hsi_stretch(
+        HSItools::hsi_calc_stretch(
           reflectance,
           type = type,
           filename = spatials(paste0("_", type, ext)),
@@ -106,7 +107,7 @@ tidyr::crossing(type = c("RGB", "CIR", "NIR"), ext = c(".tif", ".png")) |>
         )
       },
       # Specify all arguments and functions for crating
-      reflectance_path = terra::sources(reflectance),
+      reflectance_path = products(".tif"),
       products = products,
       spatials = spatials,
       capture = capture
