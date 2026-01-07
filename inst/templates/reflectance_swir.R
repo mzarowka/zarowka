@@ -18,10 +18,10 @@ references <- \(type, suffix) {
 }
 
 # Drive name and captured data
-capture <- fs::path("")
+capture <- fs::path("{{{capture}}}")
 
 # References
-reference <- fs::path("")
+reference <- fs::path("{{{reference}}}")
 
 # Create dirs
 fs::dir_create(paste0(capture, c("/products/", "/spatial/")))
