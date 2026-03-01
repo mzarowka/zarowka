@@ -3,7 +3,6 @@
 # Setup ----
 library(HSItools)
 library(tidyverse)
-library(mirai)
 
 # Names and paths
 # Constructors
@@ -80,15 +79,15 @@ reflectance <- HSItools::hsi_calc_reflectance(
   in_memory = TRUE
 ) |>
   terra::flip(
-    direction = "horizontal",
+    direction = "horizontal"
+  ) |>
+  # Quantize
+  HSItools::hsi_write_scaled(
     filename = products(".tif"),
     overwrite = TRUE
   )
 
 # Previews ----
-# Set daemons
-mirai::daemons(0)
-
 # Generate all previews
 # Create a combination of type and extension
 tidyr::crossing(type = c("SWIR"), ext = c(".tif", ".png")) |>
@@ -136,3 +135,5 @@ terra::writeVector(
 # Cleanup ----
 fs::dir_ls(tempdir()) |>
   fs::file_delete()
+
+gc()
