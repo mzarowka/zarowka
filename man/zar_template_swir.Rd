@@ -4,12 +4,21 @@
 \alias{zar_template_swir}
 \title{Use SWIR reflectance template}
 \usage{
-zar_template_swir(path, overwrite = FALSE)
+zar_template_swir(
+  path,
+  capture = NULL,
+  reference = capture,
+  if_exists = "error"
+)
 }
 \arguments{
-\item{path}{Destination path for the script}
+\item{path}{Destination path (file or directory)}
 
-\item{overwrite}{Overwrite existing file? Default FALSE}
+\item{capture}{Capture directory name. If NULL and path is directory, inferred from path.}
+
+\item{reference}{Reference directory name. Defaults to capture.}
+
+\item{if_exists}{What to do if file exists: "error", "skip", or "overwrite"}
 }
 \description{
 Use SWIR reflectance template
