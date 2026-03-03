@@ -79,10 +79,7 @@ reflectance <- HSItools::hsi_calc_reflectance(
   in_memory = TRUE
 ) |>
   terra::flip(
-    direction = "horizontal"
-  ) |>
-  # Quantize
-  HSItools::hsi_write_scaled(
+    direction = "horizontal",
     filename = products(".tif"),
     overwrite = TRUE
   )

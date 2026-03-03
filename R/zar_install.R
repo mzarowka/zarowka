@@ -91,7 +91,9 @@ zar_install <- function() {
     "svglite",
     "supercells",
     "glmnet",
-    "leaflet"
+    "leaflet",
+    "whithr",
+    "carrier"
   )
 
   # Install packages
