@@ -13,6 +13,8 @@ Imports:
     cli,
     fs,
     pak,
+    purrr,
+    utils,
     whisker
 Depends: 
     R (>= 4.1.0)
