@@ -93,7 +93,8 @@ zar_install <- function() {
     "glmnet",
     "leaflet",
     "whithr",
-    "carrier"
+    "carrier",
+    "ggvegan"
   )
 
   # Install packages
