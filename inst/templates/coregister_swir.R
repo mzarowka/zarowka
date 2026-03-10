@@ -13,8 +13,8 @@ library(tidyverse)
 # Identity -------------------------------------------------------------------
 # Use bare folder names only, not full paths
 
-sensor       <- "swir"
-capture      <- "{{{capture}}}"
+sensor <- "swir"
+capture <- "{{{capture}}}"
 vnir_capture <- "{{{vnir_capture}}}"
 
 # Path constructors ----------------------------------------------------------
@@ -57,7 +57,8 @@ HSItools::hsi_check_gcp(matched)
 HSItools::hsi_coregister(
   x,
   terra::rast(vnir_spatials("_RGB.tif")),
-  matched_gcps = matched,
+  gcp = matched,
+  method = "lanczos",
   filename = products("_coreg.tif"),
   overwrite = TRUE
 )
