@@ -1,23 +1,28 @@
 #' Internal template copying function
 #' @param template_file Name of the template file in inst/templates/
 #' @param path Destination path for the new file
-#' @param capture Capture directory name
-#' @param reference Reference directory name
+#' @param data Named list of template variables passed to whisker
 #' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
 #' @return Invisibly returns the destination path
 #' @noRd
 use_template <- function(
   template_file,
   path,
-  capture,
-  reference,
+  data = list(),
   if_exists = "error"
 ) {
   if_exists <- match.arg(if_exists, c("error", "skip", "overwrite"))
 
-  # Sanitise to bare names in case full paths were passed
-  capture   <- fs::path_file(capture)
-  reference <- fs::path_file(reference)
+  # Sanitise path-like variables to bare names
+  if (!is.null(data$capture)) {
+    data$capture <- fs::path_file(data$capture)
+  }
+  if (!is.null(data$reference)) {
+    data$reference <- fs::path_file(data$reference)
+  }
+  if (!is.null(data$vnir_capture)) {
+    data$vnir_capture <- fs::path_file(data$vnir_capture)
+  }
 
   template_path <- system.file(
     "templates",
@@ -42,7 +47,7 @@ use_template <- function(
     )
   }
 
-  # Ensure destination directory exists (skip if root/drive)
+  # Ensure destination directory exists
   dest_dir <- fs::path_dir(path)
 
   if (!fs::dir_exists(dest_dir)) {
@@ -51,10 +56,7 @@ use_template <- function(
 
   # Read and render template
   template_raw <- readLines(template_path, warn = FALSE)
-  template_rendered <- whisker::whisker.render(
-    template_raw,
-    data = list(capture = capture, reference = reference)
-  )
+  template_rendered <- whisker::whisker.render(template_raw, data = data)
 
   # Write rendered template
   writeLines(template_rendered, path)
@@ -87,7 +89,12 @@ zar_template_vnir <- function(
     cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
   }
 
-  use_template("reflectance_vnir.R", path, capture, reference, if_exists)
+  use_template(
+    "reflectance_vnir.R",
+    path,
+    data = list(capture = capture, reference = reference),
+    if_exists = if_exists
+  )
 }
 
 
@@ -113,5 +120,69 @@ zar_template_swir <- function(
     cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
   }
 
-  use_template("reflectance_swir.R", path, capture, reference, if_exists)
+  use_template(
+    "reflectance_swir.R",
+    path,
+    data = list(capture = capture, reference = reference),
+    if_exists = if_exists
+  )
+}
+
+
+#' Use VNIR postprocess template
+#' @param path Destination path (file or directory)
+#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
+#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
+#' @export
+zar_template_vnir_postprocess <- function(
+  path,
+  capture = NULL,
+  if_exists = "error"
+) {
+  if (fs::is_dir(path)) {
+    capture <- capture %||% fs::path_file(path)
+    path <- fs::path(path, "02_postprocess.R")
+  }
+
+  if (is.null(capture)) {
+    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
+  }
+
+  use_template(
+    "postprocess_vnir.R",
+    path,
+    data = list(capture = capture),
+    if_exists = if_exists
+  )
+}
+
+
+#' Use SWIR postprocess template
+#' @param path Destination path (file or directory)
+#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
+#' @param vnir_capture Paired VNIR capture directory name. Used to locate the
+#'   transect layer computed during VNIR postprocessing.
+#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
+#' @export
+zar_template_swir_postprocess <- function(
+  path,
+  capture = NULL,
+  vnir_capture,
+  if_exists = "error"
+) {
+  if (fs::is_dir(path)) {
+    capture <- capture %||% fs::path_file(path)
+    path <- fs::path(path, "02_postprocess.R")
+  }
+
+  if (is.null(capture)) {
+    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
+  }
+
+  use_template(
+    "postprocess_swir.R",
+    path,
+    data = list(capture = capture, vnir_capture = vnir_capture),
+    if_exists = if_exists
+  )
 }
