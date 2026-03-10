@@ -1,4 +1,3 @@
-
 #' Use SWIR coregister template
 #' @param path Destination path (file or directory)
 #' @param capture Capture directory name. If NULL and path is directory,
