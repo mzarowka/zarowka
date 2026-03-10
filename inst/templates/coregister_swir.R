@@ -63,6 +63,37 @@ HSItools::hsi_coregister(
   overwrite = TRUE
 )
 
+# Previews ---------------------------------------------------------------
+
+# Create a combination of type and extension
+tidyr::crossing(type = c("SWIR"), ext = c(".tif", ".png")) |>
+  purrr::pwalk(
+    purrr::in_parallel(
+      \(type, ext) {
+        # Load libraries
+        library(HSItools)
+        library(terra)
+
+        # Read reflectance from drive
+        reflectance <- terra::rast(products("_coreg.tif"))
+
+        # Stretch raster by type and extension
+        HSItools::hsi_calc_stretch(
+          reflectance,
+          type = type,
+          filename = spatials(paste0("_coreg_", type, ext)),
+          overwrite = TRUE
+        )
+      },
+      # Specify all arguments and functions for crating
+      reflectance_path = products("_coreg.tif"),
+      products = products,
+      spatials = spatials,
+      capture = capture
+    ),
+    .progress = TRUE
+  )
+
 # Cleanup --------------------------------------------------------------------
 
 fs::dir_ls(tempdir()) |>
