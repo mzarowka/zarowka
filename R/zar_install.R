@@ -94,7 +94,10 @@ zar_install <- function() {
     "leaflet",
     "whithr",
     "carrier",
-    "ggvegan"
+    "ggvegan",
+    "automap",
+    "fields",
+    "rcartocolor"
   )
 
   # Install packages
