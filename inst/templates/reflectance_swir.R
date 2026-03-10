@@ -1,35 +1,62 @@
-# REFLECTANCE #################################################################
-# Calculate only "raw" reflectance without any postprocessing
-# Setup ----
+# REFLECTANCE ------------------------------------------------------------
+# Calculate only reflectance, no postprocessing
+# Always open at the core level, rather than for example a site level
+
+# Setup ------------------------------------------------------------------
+
+library(here)
+library(terra)
 library(HSItools)
 library(tidyverse)
 
-# Names and paths
-# Constructors
-products <- \(suffix) fs::path(paste0(capture, "/products/", capture, suffix))
+# Identity ---------------------------------------------------------------
 
-spatials <- \(suffix) fs::path(paste0(capture, "/spatial/", capture, suffix))
+sensor <- "swir"
 
-captures <- \(suffix) fs::path(paste0(capture, "/capture/", capture, suffix))
+capture <- "{{{capture}}}"
 
-references <- \(type, suffix) {
-  fs::path(paste0(reference, "/capture/", type, "_", reference, suffix))
+reference <- "{{{reference}}}"
+
+# Path constructors ------------------------------------------------------
+
+products <- \(suffix) {
+  here::here(sensor, capture, "products", paste0(capture, suffix))
 }
 
-# Drive name and captured data
-capture <- fs::path("{{{capture}}}")
+spatials <- \(suffix) {
+  here::here(sensor, capture, "spatial", paste0(capture, suffix))
+}
 
-# References
-reference <- fs::path("{{{reference}}}")
+captures <- \(suffix) {
+  here::here(sensor, capture, "capture", paste0(capture, suffix))
+}
 
-# Create dirs
-fs::dir_create(paste0(capture, c("/products/", "/spatial/")))
+references <- \(type, suffix) {
+  here::here(sensor, reference, "capture", paste0(type, "_", reference, suffix))
+}
 
-# Data ----
-## SpatRaster ----
-# Use darkreference from underexposed scan
-# darkreference from capture scan migh lead to negative values
-data <- list(
+# Create dirs ------------------------------------------------------------
+
+purrr::walk(
+  c("products", "spatial"),
+  \(dir) fs::dir_create(here::here(sensor, capture, dir))
+)
+
+# Tint reader ------------------------------------------------------------
+
+hsi_tint <- \(x) {
+  readr::read_lines(x) |>
+    stringr::str_subset("^tint") |>
+    stringr::str_extract("\\d+\\.\\d+") |>
+    as.numeric()
+}
+
+# Data -------------------------------------------------------------------
+
+## SpatRasters ------------------------------------------------------------
+
+# Use darkreference from underexposed scan so no negative values are introduced
+rasters <- list(
   x = terra::rast(
     captures(".raw"),
     noflip = TRUE
@@ -44,38 +71,31 @@ data <- list(
   )
 )
 
-## Integration times ----
-# Whiteref
-tintw <- readr::read_lines(
-  references("WHITEREF", ".hdr")
-) |>
-  stringr::str_subset("^tint") |>
-  stringr::str_extract("\\d+\\.\\d+") |>
-  as.numeric()
+## Integration times ----------------------------------------------------
 
-# Data
-tints <- readr::read_lines(
-  captures(".hdr")
-) |>
-  stringr::str_subset("^tint") |>
-  stringr::str_extract("\\d+\\.\\d+") |>
-  as.numeric()
+tints <- list(
+  white = hsi_tint(references("WHITEREF", ".hdr")),
+  scan = hsi_tint(captures(".hdr"))
+)
 
 # Check integration times
-if (tintw > tints) {
+if (tints$white > tints$scan) {
   cli::cli_abort(
     "Whiteref integration time is greater than the sample integration time."
   )
 } else {
-  cli::cli_alert_success("Correct integration times of {tintw} and {tints}.")
+  cli::cli_alert_success(
+    "Correct integration times of {tints$white} and {tints$scan}."
+  )
 }
 
-# Calculate reflectance ----
+# Calculate reflectance --------------------------------------------------
+
 reflectance <- HSItools::hsi_calc_reflectance(
-  x = data$x,
-  whiteref = data$whiteref,
-  darkref = data$darkref,
-  tint = c(tintw, tints),
+  x = rasters$x,
+  whiteref = rasters$whiteref,
+  darkref = rasters$darkref,
+  tint = c(tints$white, tints$scan),
   in_memory = TRUE
 ) |>
   terra::flip(
@@ -84,8 +104,8 @@ reflectance <- HSItools::hsi_calc_reflectance(
     overwrite = TRUE
   )
 
-# Previews ----
-# Generate all previews
+# Previews ---------------------------------------------------------------
+
 # Create a combination of type and extension
 tidyr::crossing(type = c("SWIR"), ext = c(".tif", ".png")) |>
   purrr::pwalk(
@@ -115,10 +135,10 @@ tidyr::crossing(type = c("SWIR"), ext = c(".tif", ".png")) |>
     .progress = TRUE
   )
 
-# Geopackage ----
+# Geopackage -------------------------------------------------------------
+
 # Get extent of full reflectance and use as a template
 extent <- terra::ext(reflectance) |>
-  # Convert to SpatVector
   terra::vect()
 
 # Write geopackage with full extent
@@ -129,7 +149,8 @@ terra::writeVector(
   overwrite = TRUE
 )
 
-# Cleanup ----
+# Cleanup ----------------------------------------------------------------
+
 fs::dir_ls(tempdir()) |>
   fs::file_delete()
 

@@ -15,6 +15,10 @@ use_template <- function(
 ) {
   if_exists <- match.arg(if_exists, c("error", "skip", "overwrite"))
 
+  # Sanitise to bare names in case full paths were passed
+  capture   <- fs::path_file(capture)
+  reference <- fs::path_file(reference)
+
   template_path <- system.file(
     "templates",
     template_file,
@@ -76,7 +80,7 @@ zar_template_vnir <- function(
   if (fs::is_dir(path)) {
     capture <- capture %||% fs::path_file(path)
     reference <- reference %||% capture
-    path <- fs::path(path, "reflectance_vnir.R")
+    path <- fs::path(path, "01_reflectance.R")
   }
 
   if (is.null(capture)) {
@@ -91,7 +95,6 @@ zar_template_vnir <- function(
 #' @param path Destination path (file or directory)
 #' @param capture Capture directory name. If NULL and path is directory, inferred from path.
 #' @param reference Reference directory name. Defaults to capture.
-#' @param reference Reference directory name. Defaults to capture.
 #' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
 #' @export
 zar_template_swir <- function(
@@ -103,7 +106,7 @@ zar_template_swir <- function(
   if (fs::is_dir(path)) {
     capture <- capture %||% fs::path_file(path)
     reference <- reference %||% capture
-    path <- fs::path(path, "reflectance_swir.R")
+    path <- fs::path(path, "01_reflectance.R")
   }
 
   if (is.null(capture)) {
