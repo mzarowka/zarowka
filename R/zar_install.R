@@ -97,7 +97,8 @@ zar_install <- function() {
     "ggvegan",
     "automap",
     "fields",
-    "rcartocolor"
+    "rcartocolor",
+    "spatialsample"
   )
 
   # Install packages
