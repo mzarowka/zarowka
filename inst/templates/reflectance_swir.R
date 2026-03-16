@@ -151,7 +151,4 @@ terra::writeVector(
 
 # Cleanup ----------------------------------------------------------------
 
-fs::dir_ls(tempdir()) |>
-  fs::file_delete()
-
 gc()
