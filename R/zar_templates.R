@@ -141,7 +141,7 @@ zar_template_vnir_postprocess <- function(
 ) {
   if (fs::is_dir(path)) {
     capture <- capture %||% fs::path_file(path)
-    path <- fs::path(path, "02_postprocess.R")
+    path <- fs::path(path, "postprocess.R")
   }
 
   if (is.null(capture)) {
@@ -172,7 +172,7 @@ zar_template_swir_postprocess <- function(
 ) {
   if (fs::is_dir(path)) {
     capture <- capture %||% fs::path_file(path)
-    path <- fs::path(path, "02_postprocess.R")
+    path <- fs::path(path, "postprocess.R")
   }
 
   if (is.null(capture)) {
@@ -183,6 +183,64 @@ zar_template_swir_postprocess <- function(
     "postprocess_swir.R",
     path,
     data = list(capture = capture, vnir_capture = vnir_capture),
+    if_exists = if_exists
+  )
+}
+
+#' Use VNIR features template
+#' @param path Destination path (file or directory)
+#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
+#' @param n_components Number of PCA/MNF components to retain. Default 10.
+#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
+#' @export
+zar_template_vnir_features <- function(
+  path,
+  capture = NULL,
+  n_components = 10L,
+  if_exists = "error"
+) {
+  if (fs::is_dir(path)) {
+    capture <- capture %||% fs::path_file(path)
+    path <- fs::path(path, "features.R")
+  }
+
+  if (is.null(capture)) {
+    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
+  }
+
+  use_template(
+    "features_vnir.R",
+    path,
+    data = list(capture = capture, n_components = n_components),
+    if_exists = if_exists
+  )
+}
+
+#' Use SWIR features template
+#' @param path Destination path (file or directory)
+#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
+#' @param n_components Number of PCA/MNF components to retain. Default 10.
+#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
+#' @export
+zar_template_swir_features <- function(
+  path,
+  capture = NULL,
+  n_components = 10L,
+  if_exists = "error"
+) {
+  if (fs::is_dir(path)) {
+    capture <- capture %||% fs::path_file(path)
+    path <- fs::path(path, "features.R")
+  }
+
+  if (is.null(capture)) {
+    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
+  }
+
+  use_template(
+    "features_swir.R",
+    path,
+    data = list(capture = capture, n_components = n_components),
     if_exists = if_exists
   )
 }

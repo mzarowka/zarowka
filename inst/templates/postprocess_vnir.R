@@ -38,7 +38,7 @@ x <- terra::rast(products(".tif"))
 # Read core ends and compute fixed-width transect
 ends <- terra::vect(spatials(".gpkg"), layer = "ends")
 
-transect <- HSItools::find_fixed_extent(terra::ext(ends), width = 100)
+transect <- HSItools::hsi_find_extent(terra::ext(ends), width = 100)
 
 # Write transect back to gpkg for downstream use (including paired SWIR)
 transect |>
@@ -98,9 +98,32 @@ cr <- HSItools::hsi_tiled(
 
 mirai::daemons(0)
 
-# Cleanup --------------------------------------------------------------------
+# Physical coordinate raster -------------------------------------------------
+# Scan length must be read from the scan log — it is not in any output file.
+# Enter the value recorded by the operator (Target stop - Target start).
 
-fs::dir_ls(tempdir()) |>
-  fs::file_delete()
+um <- HSItools::hsi_calibration_from_dims(
+  pixels = terra::nrow(sg),
+  distance = ..., # USER FILLS IN: scan length from scan log in mm
+  units = "mm"
+)
+
+coords <- HSItools::hsi_calc_coords(
+  sg,
+  um_per_pixel = um,
+  filename = products("_coords.tif"),
+  overwrite = TRUE
+)
+
+# Shift coordinate raster to top of core (first ends point = true zero depth)
+top <- terra::vect(spatials(".gpkg"), layer = "ends")[1, ]
+
+coords_shifted <- HSItools::hsi_shift_coords(
+  coords,
+  reference = top,
+  origin = 0,
+  filename = products("_coords_shifted.tif"),
+  overwrite = TRUE
+)
 
 gc()
