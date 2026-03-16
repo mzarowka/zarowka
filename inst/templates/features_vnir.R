@@ -21,7 +21,13 @@ cores <- 4
 # Set to TRUE to recompute outputs that already exist on disk
 force_recompute <- FALSE
 
-n_components <- {{{n_components}}}
+n_components <- {
+  {
+    {
+      n_components
+    }
+  }
+}
 
 # Path constructors ----------------------------------------------------------
 
@@ -37,7 +43,9 @@ mirai::daemons(cores)
 
 if (force_recompute || !fs::file_exists(products("_pca_sg0.tif"))) {
   if (!fs::file_exists(products("_sg0.tif"))) {
-    cli::cli_warn("Source file {.file {products('_sg0.tif')}} not found. Skipping PCA on sg0.")
+    cli::cli_warn(
+      "Source file {.file {products('_sg0.tif')}} not found. Skipping PCA on sg0."
+    )
   } else {
     x <- terra::rast(products("_sg0.tif"))
 
@@ -64,7 +72,9 @@ if (force_recompute || !fs::file_exists(products("_pca_sg0.tif"))) {
 
 if (force_recompute || !fs::file_exists(products("_pca_sg1.tif"))) {
   if (!fs::file_exists(products("_sg1.tif"))) {
-    cli::cli_warn("Source file {.file {products('_sg1.tif')}} not found. Skipping PCA on sg1.")
+    cli::cli_warn(
+      "Source file {.file {products('_sg1.tif')}} not found. Skipping PCA on sg1."
+    )
   } else {
     x <- terra::rast(products("_sg1.tif"))
 
@@ -86,46 +96,33 @@ if (force_recompute || !fs::file_exists(products("_pca_sg1.tif"))) {
   }
 }
 
-# PCA on cr ------------------------------------------------------------------
-
-if (force_recompute || !fs::file_exists(products("_pca_cr.tif"))) {
-  if (!fs::file_exists(products("_cr.tif"))) {
-    cli::cli_warn("Source file {.file {products('_cr.tif')}} not found. Skipping PCA on cr.")
-  } else {
-    x <- terra::rast(products("_cr.tif"))
-
-    names(x) <- make.names(names(x))
-
-    pca_model <- terra::prcomp(x, center = TRUE, scale. = TRUE, retx = FALSE)
-
-    pca_cr <- terra::predict(x, pca_model, index = seq_len(n_components))
-
-    names(pca_cr) <- paste0("PC", seq_len(n_components))
-
-    terra::writeRaster(
-      pca_cr,
-      filename = products("_pca_cr.tif"),
-      overwrite = TRUE
-    )
-
-    cli::cli_inform("PCA on cr written to {.file {products('_pca_cr.tif')}}.")
-  }
-}
-
 # MNF ------------------------------------------------------------------------
-# Requires the spacetime package — skipped silently if not installed
+# Requires the spacetime package — skipped silently if not installed.
+# hsi_calc_mnf() orders components by decreasing noise fraction: signal is in
+# the tail. Inspect fit$values to verify n_components captures the signal-rich
+# components before committing to an output file.
+# trim: set to ceiling(window / 2) matching the hsi_smooth_savgol() window used
+# in postprocess (default window = 11, so trim = 6L).
 
 if (!requireNamespace("spacetime", quietly = TRUE)) {
   cli::cli_warn("Package {.pkg spacetime} is not installed. Skipping MNF.")
 } else if (force_recompute || !fs::file_exists(products("_mnf.tif"))) {
   if (!fs::file_exists(products("_sg0.tif"))) {
-    cli::cli_warn("Source file {.file {products('_sg0.tif')}} not found. Skipping MNF.")
+    cli::cli_warn(
+      "Source file {.file {products('_sg0.tif')}} not found. Skipping MNF."
+    )
   } else {
     x <- terra::rast(products("_sg0.tif"))
 
-    mnf <- HSItools::hsi_calc_mnf(
+    mnf_fit <- HSItools::hsi_calc_mnf(
       x,
-      n_components = n_components,
+      trim = 8L # USER VERIFY: ceiling(window / 2) for the SG window used in postprocess
+    )
+
+    mnf <- HSItools::hsi_apply_mnf(
+      x,
+      fit = mnf_fit,
+      n = n_components,
       filename = products("_mnf.tif"),
       overwrite = TRUE
     )

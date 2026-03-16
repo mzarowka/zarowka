@@ -104,6 +104,11 @@ um <- HSItools::hsi_calibration_from_dims(
   units = "mm"
 )
 
+# Or
+um <- HSItools::hsi_calibration_from_scale(
+  x = HSItools:::hsi_drop_crs(terra::vect(spatials(".gpkg"), layer = "scale"))
+)
+
 coords <- HSItools::hsi_calc_coords(
   sg,
   um_per_pixel = um,
@@ -114,6 +119,12 @@ coords <- HSItools::hsi_calc_coords(
 # Shift coordinate raster to top of core (first ends point = true zero depth)
 # Ends layer is borrowed from VNIR — SWIR is co-registered to VNIR spatial framing.
 top <- terra::vect(vnir_spatials(".gpkg"), layer = "ends")[1, ]
+
+# Or
+top <- top <- terra::xyFromCell(coords, 1) |>
+  matrix(ncol = 2) |>
+  terra::vect(type = "points") |>
+  HSItools:::hsi_drop_crs()
 
 coords_shifted <- HSItools::hsi_shift_coords(
   coords,
