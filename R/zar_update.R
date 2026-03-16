@@ -1,8 +1,16 @@
 #' Update packages with pak
 #'
-#' @returns NULL
+#' @returns NULL invisibly
 #'
 #' @export
 zar_update <- function() {
-  pak::pkg_install(unname(utils::old.packages()[, "Package"]))
+  pkgs <- utils::old.packages()
+
+  if (is.null(pkgs)) {
+    message("All packages are up to date.")
+    return(invisible(NULL))
+  }
+
+  pak::pkg_install(unname(pkgs[, "Package"]))
+  invisible(NULL)
 }
