@@ -17,6 +17,8 @@ capture <- "{{{capture}}}"
 
 reference <- "{{{reference}}}"
 
+darkspec <- "{{{darkspec}}}"
+
 # Path constructors ------------------------------------------------------
 
 products <- \(suffix) {
@@ -33,6 +35,10 @@ captures <- \(suffix) {
 
 references <- \(type, suffix) {
   here::here(sensor, reference, "capture", paste0(type, "_", reference, suffix))
+}
+
+darkrefs <- \(suffix) {
+  here::here(sensor, darkspec, "capture", paste0("DARKREF_", darkspec, suffix))
 }
 
 # Create dirs ------------------------------------------------------------
@@ -55,7 +61,9 @@ hsi_tint <- \(x) {
 
 ## SpatRasters ------------------------------------------------------------
 
-# Use darkreference from underexposed scan so no negative values are introduced
+# Matched dark references: `darkref` from the whiteref session (denominator
+# subtraction); `darkspec` from the specimen session (numerator subtraction).
+# In a single-session workflow the two resolve to the same file.
 rasters <- list(
   x = terra::rast(
     captures(".raw"),
@@ -67,6 +75,10 @@ rasters <- list(
   ),
   darkref = terra::rast(
     references("DARKREF", ".raw"),
+    noflip = TRUE
+  ),
+  darkspec = terra::rast(
+    darkrefs(".raw"),
     noflip = TRUE
   )
 )
@@ -95,6 +107,7 @@ reflectance <- HSItools::hsi_calc_reflectance(
   x = rasters$x,
   whiteref = rasters$whiteref,
   darkref = rasters$darkref,
+  darkspec = rasters$darkspec,
   tint = c(tints$white, tints$scan),
   in_memory = TRUE
 ) |>

@@ -20,6 +20,9 @@ use_template <- function(
   if (!is.null(data$reference)) {
     data$reference <- fs::path_file(data$reference)
   }
+  if (!is.null(data$darkspec)) {
+    data$darkspec <- fs::path_file(data$darkspec)
+  }
   if (!is.null(data$vnir_capture)) {
     data$vnir_capture <- fs::path_file(data$vnir_capture)
   }
@@ -69,19 +72,26 @@ use_template <- function(
 
 #' Use VNIR reflectance template
 #' @param path Destination path (file or directory)
-#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
-#' @param reference Reference directory name. Defaults to capture.
+#' @param capture Capture directory name. If NULL and path is directory,
+#'   inferred from path.
+#' @param reference White reference capture directory name. Defaults to
+#'   `capture` (single-session workflow).
+#' @param darkspec Specimen-side dark reference capture directory name.
+#'   Defaults to `capture` (specimen's own DARKREF). Override only when
+#'   sourcing the specimen-side dark from a different session.
 #' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
 #' @export
 zar_template_vnir <- function(
   path,
   capture = NULL,
   reference = capture,
+  darkspec = capture,
   if_exists = "error"
 ) {
   if (fs::is_dir(path)) {
     capture <- capture %||% fs::path_file(path)
     reference <- reference %||% capture
+    darkspec <- darkspec %||% capture
     path <- fs::path(path, "01_reflectance.R")
   }
 
@@ -92,7 +102,7 @@ zar_template_vnir <- function(
   use_template(
     "reflectance_vnir.R",
     path,
-    data = list(capture = capture, reference = reference),
+    data = list(capture = capture, reference = reference, darkspec = darkspec),
     if_exists = if_exists
   )
 }
@@ -100,19 +110,26 @@ zar_template_vnir <- function(
 
 #' Use SWIR reflectance template
 #' @param path Destination path (file or directory)
-#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
-#' @param reference Reference directory name. Defaults to capture.
+#' @param capture Capture directory name. If NULL and path is directory,
+#'   inferred from path.
+#' @param reference White reference capture directory name. Defaults to
+#'   `capture` (single-session workflow).
+#' @param darkspec Specimen-side dark reference capture directory name.
+#'   Defaults to `capture` (specimen's own DARKREF). Override only when
+#'   sourcing the specimen-side dark from a different session.
 #' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
 #' @export
 zar_template_swir <- function(
   path,
   capture = NULL,
   reference = capture,
+  darkspec = capture,
   if_exists = "error"
 ) {
   if (fs::is_dir(path)) {
     capture <- capture %||% fs::path_file(path)
     reference <- reference %||% capture
+    darkspec <- darkspec %||% capture
     path <- fs::path(path, "01_reflectance.R")
   }
 
@@ -123,7 +140,7 @@ zar_template_swir <- function(
   use_template(
     "reflectance_swir.R",
     path,
-    data = list(capture = capture, reference = reference),
+    data = list(capture = capture, reference = reference, darkspec = darkspec),
     if_exists = if_exists
   )
 }
