@@ -55,7 +55,6 @@ hsi_tint <- \(x) {
 
 ## SpatRasters ------------------------------------------------------------
 
-# Use darkreference from underexposed scan so no negative values are introduced
 rasters <- list(
   x = terra::rast(
     captures(".raw"),
@@ -70,6 +69,29 @@ rasters <- list(
     noflip = TRUE
   )
 )
+
+## Matched specimen dark --------------------------------------------------
+
+# When using an external reference session, load the specimen-session dark
+# reference for matched dark subtraction
+darkspec_path <- here::here(
+  sensor,
+  capture,
+  "capture",
+  paste0("DARKREF_", capture, ".raw")
+)
+
+darkspec <- if (capture != reference && fs::file_exists(darkspec_path)) {
+  cli::cli_alert_success("Using matched specimen dark reference.")
+  terra::rast(darkspec_path, noflip = TRUE)
+} else {
+  if (capture != reference) {
+    cli::cli_alert_warning(
+      "No specimen dark reference found at {.path {darkspec_path}}. Falling back to integration time scaling."
+    )
+  }
+  NULL
+}
 
 ## Integration times ----------------------------------------------------
 
@@ -95,6 +117,7 @@ reflectance <- HSItools::hsi_calc_reflectance(
   x = rasters$x,
   whiteref = rasters$whiteref,
   darkref = rasters$darkref,
+  darkspec = darkspec,
   tint = c(tints$white, tints$scan),
   in_memory = TRUE
 ) |>
@@ -146,7 +169,8 @@ terra::writeVector(
   extent,
   filename = spatials(".gpkg"),
   layer = "extent",
-  overwrite = TRUE
+  overwrite = TRUE,
+  insert = TRUE
 )
 
 # Cleanup ----------------------------------------------------------------

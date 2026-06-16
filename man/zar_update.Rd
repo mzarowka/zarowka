@@ -6,6 +6,9 @@
 \usage{
 zar_update()
 }
+\value{
+NULL invisibly
+}
 \description{
 Update packages with pak
 }
