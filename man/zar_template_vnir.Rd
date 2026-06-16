@@ -8,15 +8,22 @@ zar_template_vnir(
   path,
   capture = NULL,
   reference = capture,
+  darkspec = capture,
   if_exists = "error"
 )
 }
 \arguments{
 \item{path}{Destination path (file or directory)}
 
-\item{capture}{Capture directory name. If NULL and path is directory, inferred from path.}
+\item{capture}{Capture directory name. If NULL and path is directory,
+inferred from path.}
 
-\item{reference}{Reference directory name. Defaults to capture.}
+\item{reference}{White reference capture directory name. Defaults to
+\code{capture} (single-session workflow).}
+
+\item{darkspec}{Specimen-side dark reference capture directory name.
+Defaults to \code{capture} (specimen's own DARKREF). Override only when
+sourcing the specimen-side dark from a different session.}
 
 \item{if_exists}{What to do if file exists: "error", "skip", or "overwrite"}
 }

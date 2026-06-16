@@ -98,7 +98,8 @@ zar_install <- function() {
     "automap",
     "fields",
     "rcartocolor",
-    "spatialsample"
+    "spatialsample",
+    "devtools"
   )
 
   # Install packages

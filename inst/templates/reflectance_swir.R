@@ -17,6 +17,8 @@ capture <- "{{{capture}}}"
 
 reference <- "{{{reference}}}"
 
+darkspec <- "{{{darkspec}}}"
+
 # Path constructors ------------------------------------------------------
 
 products <- \(suffix) {
@@ -33,6 +35,10 @@ captures <- \(suffix) {
 
 references <- \(type, suffix) {
   here::here(sensor, reference, "capture", paste0(type, "_", reference, suffix))
+}
+
+darkrefs <- \(suffix) {
+  here::here(sensor, darkspec, "capture", paste0("DARKREF_", darkspec, suffix))
 }
 
 # Create dirs ------------------------------------------------------------
@@ -66,6 +72,10 @@ rasters <- list(
   ),
   darkref = terra::rast(
     references("DARKREF", ".raw"),
+    noflip = TRUE
+  ),
+  darkspec = terra::rast(
+    darkrefs(".raw"),
     noflip = TRUE
   )
 )
