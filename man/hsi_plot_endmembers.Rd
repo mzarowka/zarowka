@@ -2,62 +2,50 @@
 % Please edit documentation in R/hsi_plot_endmembers.R
 \name{hsi_plot_endmembers}
 \alias{hsi_plot_endmembers}
-\title{Plot endmember spectra from a raster representation}
+\title{Plot endmember spectra}
 \usage{
-hsi_plot_endmembers(x, locations)
+hsi_plot_endmembers(spectra)
 }
 \arguments{
-\item{x}{A \code{\link[terra:SpatRaster-class]{SpatRaster}} with hyperspectral data.
-Any representation (reflectance, continuum-removed, derivative, ...) sharing
-the geometry the endmembers were found on.}
-
-\item{locations}{Integer vector. Cell numbers of the endmember pixels,
-indexing the same geometry as \code{x}. Optionally named to label the
-endmembers.}
+\item{spectra}{A numeric matrix of spectra, bands in rows and named spectra in
+columns, such as the \code{spectra} component of \code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}}.
+Wavelengths are read from the row names; endmember labels from the column
+names.}
 }
 \value{
-A \link[ggplot2:ggplot]{ggplot} object with one line per endmember.
+A \link[ggplot2:ggplot]{ggplot} object with one line per spectrum.
 }
 \description{
-Plot endmember spectra from a raster representation
+Plot endmember spectra
 }
 \details{
-The function reads the spectrum at each endmember cell from whatever
-representation it is handed, so the same \code{locations} plotted against
-reflectance, continuum-removed reflectance, and a first-derivative raster
-give three comparable panels. Composing those panels is deliberately left to
-the caller: call the function once per representation and combine the results
-with \code{patchwork}. Keeping a single panel per call is what makes the function
-representation-agnostic.
+A plotter, nothing more: it draws whatever spectra matrix it is handed. To
+compare representations — reflectance, continuum-removed, first derivative —
+transform the spectra first and call the function once per representation,
+combining the panels with \code{patchwork}. Keeping a single panel per call is what
+keeps it representation-agnostic.
 
-Cell numbers index the grid of \code{x}. Because the supported representations all
-share the original reflectance geometry, the same cell numbers are valid
-across them; a cell number outside \code{x} is treated as a geometry mismatch and
-aborts. Wavelengths for the x-axis are read from the layer names of \code{x},
-falling back to band index if the names are not numeric.
+Wavelengths for the x-axis are read from the row names of \code{spectra} (the band
+names carried through by \code{\link[=hsi_extract_spectra]{hsi_extract_spectra()}}), falling back to band index
+when the names are not numeric. Labels come from the column names, falling back
+to \code{EM1..EMn}.
 }
 \examples{
 \dontrun{
-x <- terra::rast("REFLECTANCE_testdata.tif")
 spectra <- hsi_extract_spectra(x, n = 1000)
-em <- hsi_calc_endmembers(spectra, n_endmembers = 4)
+red <- stats::prcomp(spectra, center = TRUE, scale. = FALSE)
+em <- hsi_calc_endmembers(spectra, reduction = red, n_endmembers = 4)
 
-# Cell numbers and labels come from the locations provenance table.
-cells <- stats::setNames(em$locations$cell, em$locations$endmember)
+hsi_plot_endmembers(em$spectra)
 
-# One panel per representation, patched by hand.
-x_cr <- hsi_remove_continuum(x)
-p_reflectance <- hsi_plot_endmembers(x, cells)
-p_continuum <- hsi_plot_endmembers(x_cr, cells)
-p_reflectance / p_continuum
+# Continuum-removed panel: transform first, then plot.
+hsi_plot_endmembers(hsi_remove_continuum(em$spectra))
 }
 
 }
 \seealso{
-\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} returns the endmember cell numbers in the \code{cell}
-column of its \code{locations} provenance table (\code{em$locations$cell}); in the
-pooled multi-scene case, filter \code{locations} to one scene first, since cell
-numbers are scene-relative. Combine multiple panels with
-\code{\link[patchwork:wrap_plots]{patchwork::wrap_plots()}}.
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} for the \code{spectra} matrix, \code{\link[=hsi_calc_sam]{hsi_calc_sam()}} for the
+numerical separation between the same spectra, and \code{\link[patchwork:wrap_plots]{patchwork::wrap_plots()}}
+to combine multiple representation panels.
 }
 \concept{Plotting}

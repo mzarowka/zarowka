@@ -66,9 +66,5 @@ x_scores <- hsi_apply_reduction(
 \code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} produces the reduction model during endmember
 search; \code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}} is the companion apply step in reflectance
 space.
-
-Other HSI Transformations:
-\code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}},
-\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}}
 }
 \concept{HSI Transformations}

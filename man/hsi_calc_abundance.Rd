@@ -8,7 +8,6 @@ hsi_calc_abundance(
   x,
   endmembers,
   method = "nnls",
-  index_name = NULL,
   cores = 1,
   filename = "",
   overwrite = FALSE,
@@ -19,14 +18,12 @@ hsi_calc_abundance(
 \item{x}{A \code{\link[terra:SpatRaster-class]{SpatRaster}} with hyperspectral data.}
 
 \item{endmembers}{Numeric matrix of endmember spectra, bands in rows and
-endmembers in columns. Must have one row per layer of \code{x}. Column names,
-if present, become output layer names.}
+endmembers in columns, as returned in the \code{spectra} component of
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}}. Must have one row per layer of \code{x}. Column names,
+when present, become the output layer names.}
 
-\item{method}{Character. Unmixing estimator. One of \code{"nnls"}
-(non-negative least squares) or \code{"ols"} (ordinary least squares).
-Default \code{"nnls"}.}
-
-\item{index_name}{Character. Name for the output layer. Default \code{NULL}.}
+\item{method}{Character. Unmixing estimator. One of \code{"nnls"} (non-negative
+least squares) or \code{"ols"} (ordinary least squares). Default \code{"nnls"}.}
 
 \item{cores}{Positive integer. Number of parallel cores. Default \code{1}.}
 
@@ -38,38 +35,42 @@ Default \code{"nnls"}.}
 }
 \value{
 A \code{\link[terra:SpatRaster-class]{SpatRaster}} with one abundance layer
-per endmember.
+per endmember, sharing the geometry of \code{x}.
 }
 \description{
 Unmix a hyperspectral raster into per-endmember abundances
 }
 \details{
 Each pixel spectrum is decomposed as a linear combination of the supplied
-endmember spectra. \code{"nnls"} constrains abundances to be non-negative without
-forcing them to sum to one, which suits scenes with albedo and shade
-variation. \code{"ols"} is unconstrained and faster but can return negative
-abundances. Wavelength correspondence between \code{x} and \code{endmembers} is the
-caller's responsibility: the function checks band count, not band alignment.
+endmember spectra, producing one output layer per endmember on the same grid
+as \code{x}. \code{"nnls"} constrains abundances to be non-negative without forcing them
+to sum to one, which suits scenes with albedo and shade variation. \code{"ols"} is
+unconstrained and faster but can return negative abundances. Wavelength
+correspondence between \code{x} and \code{endmembers} is the caller's responsibility:
+the function checks band count, not band alignment. Fully \code{NA} (background)
+pixels return \code{NA} abundances.
 }
 \examples{
 \dontrun{
-x <- terra::rast("REFLECTANCE_testdata.tif")
-em <- matrix(stats::runif(terra::nlyr(x) * 3), ncol = 3)
-x_abundance <- hsi_calc_abundance(x, endmembers = em)
+spectra <- hsi_extract_spectra(x, n = 5000)
+red <- stats::prcomp(spectra, center = TRUE, scale. = FALSE)
+em <- hsi_calc_endmembers(spectra, reduction = red, n_endmembers = 5)
+
+x_abundance <- hsi_calc_abundance(x, endmembers = em$spectra)
 x_abundance <- hsi_calc_abundance(
   x,
-  endmembers = em,
+  endmembers = em$spectra,
   method = "ols",
   cores = 4,
-  filename = "output_abundance.tif",
+  filename = "abundance.tif",
   overwrite = TRUE
 )
 }
 
 }
 \seealso{
-Other HSI Transformations:
-\code{\link[=hsi_apply_reduction]{hsi_apply_reduction()}},
-\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}}
+Other HSI Unmixing:
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}},
+\code{\link[=hsi_calc_sam]{hsi_calc_sam()}}
 }
-\concept{HSI Transformations}
+\concept{HSI Unmixing}

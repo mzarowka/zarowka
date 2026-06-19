@@ -1,42 +1,46 @@
 #' Unmix a hyperspectral raster into per-endmember abundances
 #'
-#' @family HSI Transformations
+#' @family HSI Unmixing
 #'
 #' @param x A [`SpatRaster`][terra::SpatRaster-class] with hyperspectral data.
 #' @param endmembers Numeric matrix of endmember spectra, bands in rows and
-#'   endmembers in columns. Must have one row per layer of `x`. Column names,
-#'   if present, become output layer names.
-#' @param method Character. Unmixing estimator. One of `"nnls"`
-#'   (non-negative least squares) or `"ols"` (ordinary least squares).
-#'   Default `"nnls"`.
-#' @param index_name Character. Name for the output layer. Default `NULL`.
+#'   endmembers in columns, as returned in the `spectra` component of
+#'   [`hsi_calc_endmembers()`]. Must have one row per layer of `x`. Column names,
+#'   when present, become the output layer names.
 #' @param cores Positive integer. Number of parallel cores. Default `1`.
 #' @param filename Character. Output filename. Default `""` keeps result in memory.
 #' @param overwrite Logical. Overwrite existing file. Default `FALSE`.
 #' @param ... Additional arguments passed to [`terra::writeRaster()`].
 #'
 #' @returns A [`SpatRaster`][terra::SpatRaster-class] with one abundance layer
-#'   per endmember.
+#'   per endmember, sharing the geometry of `x`.
 #'
 #' @details
-#' Each pixel spectrum is decomposed as a linear combination of the supplied
-#' endmember spectra. `"nnls"` constrains abundances to be non-negative without
-#' forcing them to sum to one, which suits scenes with albedo and shade
-#' variation. `"ols"` is unconstrained and faster but can return negative
-#' abundances. Wavelength correspondence between `x` and `endmembers` is the
+#' Each pixel spectrum is decomposed as a non-negative linear combination of the
+#' supplied endmember spectra by non-negative least squares (Lawson & Hanson
+#' 1974, via the \pkg{nnls} package), producing one output layer per endmember
+#' on the same grid as `x`. Abundances are constrained to be non-negative
+#' without being forced to sum to one, which suits scenes with albedo and shade
+#' variation. Wavelength correspondence between `x` and `endmembers` is the
 #' caller's responsibility: the function checks band count, not band alignment.
+#' Fully `NA` (background) pixels return `NA` abundances.
+#'
+#' @references
+#' Lawson, C. L. & Hanson, R. J. (1974). *Solving Least Squares Problems*.
+#' Prentice-Hall (reprinted as SIAM Classics in Applied Mathematics, 1995).
 #'
 #' @examples
 #' \dontrun{
-#' x <- terra::rast("REFLECTANCE_testdata.tif")
-#' em <- matrix(stats::runif(terra::nlyr(x) * 3), ncol = 3)
-#' x_abundance <- hsi_calc_abundance(x, endmembers = em)
+#' spectra <- hsi_extract_spectra(x, n = 5000)
+#' red <- stats::prcomp(spectra, center = TRUE, scale. = FALSE)
+#' em <- hsi_calc_endmembers(spectra, reduction = red, n_endmembers = 5)
+#'
+#' x_abundance <- hsi_calc_abundance(x, endmembers = em$spectra)
 #' x_abundance <- hsi_calc_abundance(
 #'   x,
-#'   endmembers = em,
-#'   method = "ols",
+#'   endmembers = em$spectra,
 #'   cores = 4,
-#'   filename = "output_abundance.tif",
+#'   filename = "abundance.tif",
 #'   overwrite = TRUE
 #' )
 #' }
@@ -45,8 +49,6 @@
 hsi_calc_abundance <- function(
   x,
   endmembers,
-  method = "nnls",
-  index_name = NULL,
   cores = 1,
   filename = "",
   overwrite = FALSE,
@@ -63,31 +65,19 @@ hsi_calc_abundance <- function(
     ))
   }
 
-  method <- match.arg(method, choices = c("nnls", "ols"))
-
-  # Resolve output layer names from endmember columns
-  layer_names <- index_name %||%
-    colnames(endmembers) %||%
+  # Output layer names from endmember columns
+  layer_names <- colnames(endmembers) %||%
     paste0("EM", seq_len(ncol(endmembers)))
 
   # Build the per-pixel unmixing function
   n_em <- ncol(endmembers)
 
-  solve_cell <- switch(
-    method,
-    nnls = \(i) {
-      if (anyNA(i)) {
-        return(rep(NA_real_, n_em))
-      }
-      nnls::nnls(endmembers, i)$x
-    },
-    ols = \(i) {
-      if (anyNA(i)) {
-        return(rep(NA_real_, n_em))
-      }
-      stats::.lm.fit(endmembers, i)$coefficients
+  solve_cell <- \(i) {
+    if (anyNA(i)) {
+      return(rep(NA_real_, n_em))
     }
-  )
+    nnls::nnls(endmembers, i)$x
+  }
 
   # Unmix each pixel
   result <- terra::app(x, fun = solve_cell, cores = cores)

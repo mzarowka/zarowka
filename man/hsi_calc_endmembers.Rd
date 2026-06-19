@@ -2,67 +2,82 @@
 % Please edit documentation in R/hsi_calc_endmembers.R
 \name{hsi_calc_endmembers}
 \alias{hsi_calc_endmembers}
-\title{Extract endmembers from a pooled pixel table}
+\title{Find endmembers in a hyperspectral pixel matrix}
 \usage{
-hsi_calc_endmembers(data, n_endmembers, reduction = "pca")
+hsi_calc_endmembers(spectra, reduction, n_endmembers)
 }
 \arguments{
-\item{data}{A \link[tibble:tibble]{tibble} or matrix of pixel spectra:
-wavelength-named band columns, optionally preceded by the reserved
-provenance columns \code{scene}, \code{roi}, and \code{cell}.}
+\item{spectra}{A numeric matrix of pixel spectra, pixels in rows and
+wavelength-named bands in columns, as returned by \code{\link[=hsi_extract_spectra]{hsi_extract_spectra()}}.
+Source cell numbers are read from the row names when present.}
 
-\item{n_endmembers}{Positive integer. Number of endmembers to extract.}
+\item{reduction}{A fitted dimensionality-reduction model, such as a \code{prcomp}
+object, defining the search space.}
 
-\item{reduction}{Character. Dimensionality reduction front-end. One of
-\code{"pca"} or \code{"mnf"}. Default \code{"pca"}.}
+\item{n_endmembers}{Positive integer. Number of endmembers to find.}
 }
 \value{
 A named list with components:
 \item{spectra}{Numeric matrix of endmember spectra, bands in rows and
 endmembers in columns, in reflectance space. Ready for
 \code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}}.}
-\item{indices}{Integer vector. Rows of \code{data} chosen as endmembers.}
-\item{locations}{A \link[tibble:tibble]{tibble} of the provenance rows at
-those indices, or \code{NULL} when \code{data} carries no provenance columns.}
-\item{model}{The fitted reduction model (e.g. a \code{prcomp} object).}
-\item{diagnostics}{A \link[tibble:tibble]{tibble} of pairwise spectral angles
-between endmembers, ascending. Near-zero pairs signal over-extraction.}
+\item{indices}{Integer vector. Rows of \code{spectra} chosen as endmembers.}
+\item{locations}{Integer vector of the source cell numbers at those rows,
+named by endmember, or \code{NULL} when \code{spectra} carries no row names.}
 }
 \description{
-Extract endmembers from a pooled pixel table
+Find endmembers in a hyperspectral pixel matrix
 }
 \details{
-Endmembers are extracted by VCA-seeded N-FINDR: VCA supplies a fast, robust
-set of extreme pixels, and N-FINDR refines them by maximising simplex volume
-jointly. Neither half is exposed as an option. VCA alone never re-evaluates
-its greedy, seed-sensitive picks; N-FINDR alone needs a starting simplex, and
-\code{unmixR}'s built-in initialisers fail on real data. The pairing is the only
-path that is both robust and volume-optimal, so it is the algorithm this
-function implements rather than one of several user-selectable methods.
+Endmembers are found by VCA-seeded N-FINDR: VCA supplies a fast, robust set of
+extreme pixels, and N-FINDR refines them by maximising simplex volume jointly.
+Neither half is exposed as an option. VCA alone never re-evaluates its greedy,
+seed-sensitive picks; N-FINDR alone needs a starting simplex, and \code{unmixR}'s
+built-in initialisers fail on real data. The pairing is the only path that is
+both robust and volume-optimal.
 
 VCA and N-FINDR require different search dimensionalities. VCA needs \code{p}
 projection directions, so it runs in \code{n_endmembers} reduced components;
 N-FINDR's volume search lives in the \code{p - 1} dimensions a \code{p}-vertex simplex
 spans, so it runs in \code{n_endmembers - 1}. Both stay below \code{unmixR}'s internal
 SNR step, which builds an O(N^2) pixel cross-product and exhausts memory on
-pooled sets. Endmember spectra are re-read from the original bands at the
-selected pixels, so the reduction only governs which pixels are chosen — the
-reported spectra are reduction-invariant.
+large sets. Endmember spectra are re-read from the original bands at the
+selected pixels, so the reported spectra are reduction-invariant.
 
-VCA has a stochastic projection step; call \code{\link[=set.seed]{set.seed()}} before this
-function for reproducible extraction.
+Fit the reduction separately and pass it in, for example
+\code{stats::prcomp(spectra, center = TRUE, scale. = FALSE)}. Keeping it out lets a
+single fit be reused across refits at different \code{n_endmembers} and saved with
+\code{\link[=saveRDS]{saveRDS()}} to survive a session restart. Inspect separation between the
+returned spectra with \code{\link[=hsi_calc_sam]{hsi_calc_sam()}}.
+
+VCA has a stochastic projection step; call \code{\link[=set.seed]{set.seed()}} before this function
+for reproducible results.
 }
 \examples{
 \dontrun{
-fit <- hsi_extract_spectra(x, roi = rois)
-em <- hsi_calc_endmembers(fit, n_endmembers = 5)
+spectra <- hsi_extract_spectra(x, n = 5000)
+red <- stats::prcomp(spectra, center = TRUE, scale. = FALSE)
+em <- hsi_calc_endmembers(spectra, reduction = red, n_endmembers = 5)
+
+hsi_calc_sam(em$spectra)
 x_abundance <- hsi_calc_abundance(x, endmembers = em$spectra)
 }
 
 }
-\seealso{
-Other HSI Transformations:
-\code{\link[=hsi_apply_reduction]{hsi_apply_reduction()}},
-\code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}}
+\references{
+Nascimento, J. M. P., Bioucas-Dias, J. M. (2005). Vertex component analysis: a
+fast algorithm to unmix hyperspectral data. \emph{IEEE Transactions on
+Geoscience and Remote Sensing} 43(4), 898–910.
+\doi{10.1109/TGRS.2005.844293}
+
+Winter, M. E. (1999). N-FINDR: an algorithm for fast autonomous spectral
+end-member determination in hyperspectral data. In M. R. Descour, S. S. Shen
+(Eds.), \emph{Imaging Spectrometry V}, Proc. SPIE 3753, 266–275.
+\doi{10.1117/12.366289}
 }
-\concept{HSI Transformations}
+\seealso{
+Other HSI Unmixing:
+\code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}},
+\code{\link[=hsi_calc_sam]{hsi_calc_sam()}}
+}
+\concept{HSI Unmixing}

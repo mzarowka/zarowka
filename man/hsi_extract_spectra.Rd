@@ -2,56 +2,49 @@
 % Please edit documentation in R/hsi_extract_spectra.R
 \name{hsi_extract_spectra}
 \alias{hsi_extract_spectra}
-\title{Extract a pixel-by-band table from a hyperspectral raster}
+\title{Extract a pixel-by-band matrix from a hyperspectral raster}
 \usage{
-hsi_extract_spectra(x, roi = NULL, n = NULL, scene = NA)
+hsi_extract_spectra(x, n = NULL)
 }
 \arguments{
 \item{x}{A \code{\link[terra:SpatRaster-class]{SpatRaster}} with hyperspectral data.}
 
-\item{roi}{A \code{\link[terra:SpatVector-class]{SpatVector}} of polygons to extract
-pixels from, or \code{NULL} for the whole scene. Default \code{NULL}.}
-
-\item{n}{Positive integer. Number of pixels to randomly sample, or \code{NULL}
-to take every pixel. Default \code{NULL}.}
-
-\item{scene}{Character. Scene identifier stamped into the \code{scene} column.
-Default \code{NA}.}
+\item{n}{Positive integer. Number of pixels to randomly sample, or \code{NULL} to
+take every pixel. Default \code{NULL}.}
 }
 \value{
-A \link[tibble:tibble]{tibble} with one row per extracted pixel:
-\item{scene}{Character. The \code{scene} identifier.}
-\item{roi}{Integer. Source polygon index, or \code{NA} outside ROI extraction.}
-\item{cell}{Integer. Source cell number in \code{x}.}
-\item{...}{One column per band, named by wavelength.}
+A numeric matrix with one row per extracted pixel and one column per
+band, band names as column names and source cell numbers as row names.
 }
 \description{
-Extract a pixel-by-band table from a hyperspectral raster
+Extract a pixel-by-band matrix from a hyperspectral raster
 }
 \details{
-The \code{roi} and \code{n} arguments compose into four modes. With \code{roi} only, every
-pixel inside the polygons is returned, carrying the polygon index as \code{roi}.
-With \code{n} only, \code{n} cells are sampled across the whole scene and \code{roi} is \code{NA}.
-With both, \code{n} pixels are sampled from within the ROIs. With neither, every
-pixel in \code{x} is returned and the pixel count is reported — convenient for
-small scenes, but a whole-scene pull on large rasters, so an explicit \code{n}
-is preferred there.
+One raster in, one matrix out. To restrict to a region of interest, crop and
+mask with \code{\link[terra:crop]{terra::crop()}} / \code{\link[terra:mask]{terra::mask()}} beforehand. To pool several
+scenes, bind them with \code{\link[=hsi_bind_rows]{hsi_bind_rows()}} beforehand. Either way the function
+only ever sees a single raster, and the returned cell numbers index that
+raster.
 
 Sampling uses the ambient random state; call \code{\link[=set.seed]{set.seed()}} beforehand for
 reproducible extraction. Pixels that are entirely \code{NA} (no data) are dropped;
 pixels with some \code{NA} bands are kept, since trimming bad or edge bands is the
-caller's responsibility — pass an already-trimmed \code{x}.
+caller's responsibility — pass an already-trimmed \code{x}. Taking every pixel
+(\code{n = NULL}) pulls the whole raster into memory, so set an explicit \code{n} on
+large scenes.
 }
 \examples{
 \dontrun{
 x <- terra::rast("REFLECTANCE_testdata.tif")
-rois <- terra::vect("rois.gpkg")
 
-# All pixels inside the ROIs.
-fit <- hsi_extract_spectra(x, roi = rois, scene = "scene_a")
+# Random sample across the scene.
+fit <- hsi_extract_spectra(x, n = 5000)
 
-# Random sample across the whole scene.
-fit <- hsi_extract_spectra(x, n = 5000, scene = "scene_a")
+# Region of interest: crop and mask first, then extract.
+roi <- terra::vect("roi.gpkg")
+fit <- terra::crop(x, roi) |>
+  terra::mask(roi) |>
+  hsi_extract_spectra(n = 5000)
 }
 
 }

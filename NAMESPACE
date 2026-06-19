@@ -3,6 +3,7 @@
 export(hsi_apply_reduction)
 export(hsi_calc_abundance)
 export(hsi_calc_endmembers)
+export(hsi_calc_sam)
 export(hsi_extract_spectra)
 export(hsi_plot_endmembers)
 export(zar_create_core)

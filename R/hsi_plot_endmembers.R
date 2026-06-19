@@ -1,111 +1,93 @@
-#' Plot endmember spectra from a raster representation
+#' Plot endmember spectra
 #'
 #' @family Plotting
 #'
-#' @param x A [`SpatRaster`][terra::SpatRaster-class] with hyperspectral data.
-#'   Any representation (reflectance, continuum-removed, derivative, ...) sharing
-#'   the geometry the endmembers were found on.
-#' @param locations Integer vector. Cell numbers of the endmember pixels,
-#'   indexing the same geometry as `x`. Optionally named to label the
-#'   endmembers.
+#' @param x A numeric matrix of endmember spectra with wavelengths (nm) as row
+#'   names and endmember labels as column names, as produced by
+#'   [`hsi_calc_endmembers()`] (`em$spectra`).
 #'
-#' @returns A [ggplot][ggplot2::ggplot] object with one line per endmember.
+#' @returns A [`ggplot2::ggplot`] object. Extend with `+` to add labels,
+#'   themes, or colour scales.
 #'
 #' @details
-#' The function reads the spectrum at each endmember cell from whatever
-#' representation it is handed, so the same `locations` plotted against
-#' reflectance, continuum-removed reflectance, and a first-derivative raster
-#' give three comparable panels. Composing those panels is deliberately left to
-#' the caller: call the function once per representation and combine the results
-#' with `patchwork`. Keeping a single panel per call is what makes the function
-#' representation-agnostic.
+#' Produces a minimal multi-line plot of reflectance against wavelength, one
+#' coloured line per endmember. Internally the wide matrix is reshaped to the
+#' same long form used by [`hsi_plot_spectrum()`] (`wavelength`, `value`, plus
+#' an `endmember` grouping column), so the two plotters share a single data
+#' contract. Endmember order in the legend follows column order in `x`.
 #'
-#' Cell numbers index the grid of `x`. Because the supported representations all
-#' share the original reflectance geometry, the same cell numbers are valid
-#' across them; a cell number outside `x` is treated as a geometry mismatch and
-#' aborts. Wavelengths for the x-axis are read from the layer names of `x`,
-#' falling back to band index if the names are not numeric.
+#' The returned ggplot carries no theme or axis labels — add these with `+`
+#' using standard ggplot2 conventions.
 #'
 #' @seealso
-#' [`hsi_calc_endmembers()`] returns the endmember cell numbers in the `cell`
-#' column of its `locations` provenance table (`em$locations$cell`); in the
-#' pooled multi-scene case, filter `locations` to one scene first, since cell
-#' numbers are scene-relative. Combine multiple panels with
-#' [`patchwork::wrap_plots()`].
+#' [`hsi_calc_endmembers()`] to produce the input matrix.
+#' [`hsi_calc_sam()`] for the pairwise redundancy diagnostic.
+#' [`hsi_plot_spectrum()`] for a single spectrum.
 #'
 #' @examples
 #' \dontrun{
 #' x <- terra::rast("REFLECTANCE_testdata.tif")
-#' spectra <- hsi_extract_spectra(x, n = 1000)
-#' em <- hsi_calc_endmembers(spectra, n_endmembers = 4)
+#' spectra <- hsi_extract_spectra(x, n = 5000)
+#' red <- stats::prcomp(spectra, center = TRUE, scale. = FALSE)
+#' em <- hsi_calc_endmembers(spectra, reduction = red, n_endmembers = 6)
 #'
-#' # Cell numbers and labels come from the locations provenance table.
-#' cells <- stats::setNames(em$locations$cell, em$locations$endmember)
+#' # Quick plot
+#' x_plot <- hsi_plot_endmembers(em$spectra)
 #'
-#' # One panel per representation, patched by hand.
-#' x_cr <- hsi_remove_continuum(x)
-#' p_reflectance <- hsi_plot_endmembers(x, cells)
-#' p_continuum <- hsi_plot_endmembers(x_cr, cells)
-#' p_reflectance / p_continuum
+#' # Add labels and theme with ggplot2
+#' x_plot +
+#'   ggplot2::labs(x = "Wavelength (nm)", y = "Reflectance", colour = "Endmember") +
+#'   ggplot2::theme_minimal()
 #' }
 #'
+#' @importFrom rlang .data
+#'
 #' @export
-hsi_plot_endmembers <- function(x, locations) {
+hsi_plot_endmembers <- function(x) {
   # Validate inputs
-  HSItools:::check_spatraster(x)
-  HSItools:::check_numeric(locations)
-
-  n_cells <- terra::ncell(x)
-  if (any(locations < 1 | locations > n_cells)) {
-    cli::cli_abort(c(
-      "{.arg locations} contains cell numbers outside {.arg x}.",
-      "i" = "{.arg x} has {n_cells} cell{?s}; endmember locations must index the same geometry.",
-      "x" = "Got cell numbers up to {max(locations)}."
-    ))
+  if (!is.matrix(x)) {
+    cli::cli_abort(
+      "{.arg x} is a {.class {class(x)}} not a matrix."
+    )
   }
 
-  # Wavelengths from layer names (nm); fall back to band index if the names are
-  # not numeric. Layer names of an HSItools raster are wavelengths.
-  wavelengths <- suppressWarnings(as.numeric(names(x)))
-  if (all(is.na(wavelengths))) {
-    wavelengths <- seq_len(terra::nlyr(x))
-  }
-  names(wavelengths) <- names(x)
-
-  # Endmember labels: names of locations, else EM1..EMn.
-  em_labels <- names(locations)
-  if (is.null(em_labels)) {
-    em_labels <- paste0("EM", seq_along(locations))
+  if (is.null(rownames(x)) || is.null(colnames(x))) {
+    cli::cli_abort(
+      c(
+        "{.arg x} must carry dimnames.",
+        "i" = "Row names are wavelengths in nm; column names are endmember labels."
+      )
+    )
   }
 
-  # Extract endmember spectra. `[` reads only the requested cells (one row per
-  # endmember), so this stays cheap on large rasters.
-  spectra <- tibble::as_tibble(x[locations])
+  if (anyNA(suppressWarnings(as.numeric(rownames(x))))) {
+    cli::cli_abort(
+      "{.arg x} row names must be numeric wavelengths in nm."
+    )
+  }
 
-  # Reshape to one row per endmember-band for plotting.
-  spectra_long <- spectra |>
-    dplyr::mutate(
-      endmember = factor(em_labels, levels = em_labels),
-      .before = 1
-    ) |>
+  # Reshape to long (shared shape with hsi_plot_spectrum)
+  spectra_long <- x |>
+    tibble::as_tibble(rownames = "wavelength") |>
     tidyr::pivot_longer(
-      cols = -endmember,
-      names_to = "band",
+      cols = -"wavelength",
+      names_to = "endmember",
       values_to = "value"
     ) |>
-    dplyr::mutate(wavelength = unname(wavelengths[band]))
-
-  # Build plot: one line per endmember.
-  ggplot2::ggplot(
-    spectra_long,
-    ggplot2::aes(
-      x = wavelength,
-      y = value,
-      colour = endmember,
-      group = endmember
+    dplyr::mutate(
+      wavelength = as.numeric(.data$wavelength),
+      endmember = factor(.data$endmember, levels = colnames(x))
     )
-  ) +
-    ggplot2::geom_line() +
-    ggplot2::labs(x = "Wavelength (nm)", y = "Value", colour = "Endmember") +
-    ggplot2::theme_minimal()
+
+  # Create ggplot object
+  result <- ggplot2::ggplot(data = spectra_long) +
+    ggplot2::aes(
+      x = .data$wavelength,
+      y = .data$value,
+      colour = .data$endmember
+    ) +
+    ggplot2::geom_line()
+
+  # Return result
+  result
 }

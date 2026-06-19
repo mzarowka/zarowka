@@ -1,120 +1,181 @@
-#' Extract a pixel-by-band table from a hyperspectral raster
+#' Extract a spectra matrix from a hyperspectral raster
 #'
-#' @family HSI Extraction
+#' @family HSI Unmixing
 #'
-#' @param x     A [`SpatRaster`][terra::SpatRaster-class] with hyperspectral data.
-#' @param roi   A [`SpatVector`][terra::SpatVector-class] of polygons to extract
-#'   pixels from, or `NULL` for the whole scene. Default `NULL`.
-#' @param n     Positive integer. Number of pixels to randomly sample, or `NULL`
-#'   to take every pixel. Default `NULL`.
-#' @param scene Character. Scene identifier stamped into the `scene` column.
-#'   Default `NA`.
+#' @param x A [`SpatRaster`][terra::SpatRaster-class] with hyperspectral data.
+#' @param n Positive number. Pixels to randomly sample, or `Inf` to take every
+#'   valid pixel. Default `NULL`.
+#' @param cells Numeric vector of [`terra`][terra::terra-package] cell numbers
+#'   to fetch, in the returned row order. Default `NULL`.
 #'
-#' @returns A [tibble][tibble::tibble] with one row per extracted pixel:
-#'   \item{scene}{Character. The `scene` identifier.}
-#'   \item{roi}{Integer. Source polygon index, or `NA` outside ROI extraction.}
-#'   \item{cell}{Integer. Source cell number in `x`.}
-#'   \item{...}{One column per band, named by wavelength.}
+#' @returns A numeric matrix of pixels (rows) by bands (columns), with cell
+#'   numbers as row names and band names as column names.
 #'
 #' @details
-#' The `roi` and `n` arguments compose into four modes. With `roi` only, every
-#' pixel inside the polygons is returned, carrying the polygon index as `roi`.
-#' With `n` only, `n` cells are sampled across the whole scene and `roi` is `NA`.
-#' With both, `n` pixels are sampled from within the ROIs. With neither, every
-#' pixel in `x` is returned and the pixel count is reported — convenient for
-#' small scenes, but a whole-scene pull on large rasters, so an explicit `n`
-#' is preferred there.
+#' Exactly one of `n` or `cells` must be supplied; they are mutually exclusive.
+#' A bare call with neither errors on purpose, so that materialising every pixel
+#' of a large raster is always a deliberate choice (`n = Inf`) rather than a
+#' silent default.
 #'
-#' Sampling uses the ambient random state; call [`set.seed()`] beforehand for
-#' reproducible extraction. Pixels that are entirely `NA` (no data) are dropped;
-#' pixels with some `NA` bands are kept, since trimming bad or edge bands is the
-#' caller's responsibility — pass an already-trimmed `x`.
+#' The three modes map to the cheapest read for the job:
+#' * `n` (finite) samples random pixels via [`terra::spatSample()`] without
+#'   reading the whole raster.
+#' * `n = Inf` reads every pixel via [`terra::values()`] — the deliberate
+#'   full-materialisation path.
+#' * `cells` reads only the requested cells.
+#'
+#' Cell numbers are a stable address: across co-registered rasters of the same
+#' geometry (e.g. reflectance, Savitzky-Golay, continuum-removed), the same cell
+#' number refers to the same physical pixel. Passing `cells = em$locations` from
+#' [`hsi_calc_endmembers()`] therefore re-fetches the spectra of the chosen
+#' endmember pixels in whatever processing space `x` represents. Ensuring `x` is
+#' co-registered with the raster the cells came from is the caller's
+#' responsibility; only the cell-number range is checked.
+#'
+#' Background pixels (fully `NA` rows) are dropped. In `cells` mode any requested
+#' cell that is background is dropped with a warning, since that breaks the
+#' one-to-one mapping the caller may expect.
+#'
+#' @seealso
+#' [`hsi_calc_endmembers()`] which produces the `locations` to pass as `cells`.
+#' [`hsi_plot_endmembers()`] and [`hsi_calc_sam()`] for what the matrix feeds.
 #'
 #' @examples
 #' \dontrun{
 #' x <- terra::rast("REFLECTANCE_testdata.tif")
-#' rois <- terra::vect("rois.gpkg")
 #'
-#' # All pixels inside the ROIs.
-#' fit <- hsi_extract_spectra(x, roi = rois, scene = "scene_a")
+#' # Random sample for endmember search
+#' x_spectra <- hsi_extract_spectra(x, n = 5000)
 #'
-#' # Random sample across the whole scene.
-#' fit <- hsi_extract_spectra(x, n = 5000, scene = "scene_a")
+#' # Every valid pixel (small rasters only)
+#' x_spectra <- hsi_extract_spectra(x, n = Inf)
+#'
+#' # Re-fetch the endmember pixels in another co-registered space
+#' red <- stats::prcomp(x_spectra, center = TRUE, scale. = FALSE)
+#' em <- hsi_calc_endmembers(x_spectra, reduction = red, n_endmembers = 6)
+#'
+#' x_conrem <- terra::rast("CONREM_testdata.tif")
+#' x_spectra_conrem <- hsi_extract_spectra(x_conrem, cells = em$locations)
 #' }
 #'
 #' @export
-hsi_extract_spectra <- function(x, roi = NULL, n = NULL, scene = NA) {
+hsi_extract_spectra <- function(
+  x,
+  n = NULL,
+  cells = NULL
+) {
   # Validate inputs
-  HSItools:::check_spatraster(x)
-
-  if (!is.null(roi)) {
-    HSItools:::check_spatvector(roi)
-  }
-
-  if (!is.null(n) && (n < 1 || n > terra::ncell(x))) {
-    cli::cli_abort(c(
-      "{.arg n} must be between 1 and the number of cells.",
-      "i" = "Got {n} with {terra::ncell(x)} cell{?s}."
-    ))
-  }
-
-  # Extract pixels with their source cell numbers
-  pixels <- if (is.null(roi)) {
-    extract_scene(x, n)
-  } else {
-    extract_roi(x, roi, n)
-  }
-
-  band_cols <- setdiff(names(pixels), c("roi", "cell"))
-
-  # Drop no-data (entirely NA) pixels only. A pixel with some NA bands is real
-  # data; trimming bad bands is the caller's responsibility, like edge trimming.
-  pixels |>
-    dplyr::filter(!dplyr::if_all(dplyr::all_of(band_cols), is.na)) |>
-    dplyr::mutate(scene = scene, .before = 1) |>
-    dplyr::relocate(dplyr::any_of(c("scene", "roi", "cell")))
-}
-
-#' Extract whole-scene pixels, optionally sampled
-#'
-#' @param x A [`SpatRaster`][terra::SpatRaster-class].
-#' @param n Positive integer sample size, or `NULL` for all cells.
-#'
-#' @returns A [tibble][tibble::tibble] with `roi`, `cell`, and band columns.
-#'
-#' @noRd
-extract_scene <- function(x, n) {
-  cells <- if (is.null(n)) {
-    cli::cli_inform(
-      "Extracting all {terra::ncell(x)} pixel{?s} from the scene."
+  if (!inherits(x, "SpatRaster")) {
+    cli::cli_abort(
+      "{.arg x} must be a {.cls SpatRaster}, not {.cls {class(x)}}."
     )
-    seq_len(terra::ncell(x))
-  } else {
-    sort(sample(terra::ncell(x), n))
   }
 
-  x[cells] |>
-    tibble::as_tibble() |>
-    tibble::add_column(roi = NA_integer_, cell = cells, .before = 1)
-}
+  # Resolve selection mode: exactly one of n / cells
+  if (is.null(n) && is.null(cells)) {
+    cli::cli_abort(
+      c(
+        "Choose which pixels to extract.",
+        "i" = "{.arg n}: randomly sample that many pixels, e.g. {.code n = 5000}.",
+        "i" = "{.code n = Inf}: take every valid pixel (reads the whole raster).",
+        "i" = "{.arg cells}: fetch specific cells, e.g. {.code cells = em$locations}."
+      )
+    )
+  }
 
-#' Extract ROI pixels, optionally sampled
-#'
-#' @param x   A [`SpatRaster`][terra::SpatRaster-class].
-#' @param roi A [`SpatVector`][terra::SpatVector-class] of polygons.
-#' @param n   Positive integer sample size, or `NULL` for all ROI pixels.
-#'
-#' @returns A [tibble][tibble::tibble] with `roi`, `cell`, and band columns.
-#'
-#' @noRd
-extract_roi <- function(x, roi, n) {
-  pixels <- terra::extract(x, roi, cells = TRUE, ID = TRUE) |>
-    tibble::as_tibble() |>
-    dplyr::rename(roi = "ID")
+  if (!is.null(n) && !is.null(cells)) {
+    cli::cli_abort(
+      c(
+        "{.arg n} and {.arg cells} are mutually exclusive.",
+        "i" = "Sample with {.arg n} or fetch known pixels with {.arg cells}, not both."
+      )
+    )
+  }
 
   if (!is.null(n)) {
-    pixels <- dplyr::slice_sample(pixels, n = min(n, nrow(pixels)))
+    if (!is.numeric(n) || length(n) != 1L || is.na(n) || n <= 0) {
+      cli::cli_abort(
+        "{.arg n} must be a single positive number, or {.code Inf} for all pixels."
+      )
+    }
   }
 
-  pixels
+  if (!is.null(cells)) {
+    if (!is.numeric(cells) || length(cells) == 0L || anyNA(cells)) {
+      cli::cli_abort(
+        "{.arg cells} must be a non-empty numeric vector of cell numbers."
+      )
+    }
+
+    cells <- as.integer(cells)
+
+    if (anyDuplicated(cells)) {
+      cli::cli_warn(
+        "Duplicate {.arg cells} dropped; keeping the first occurrence of each."
+      )
+      cells <- cells[!duplicated(cells)]
+    }
+
+    out_of_range <- cells[cells < 1L | cells > terra::ncell(x)]
+
+    if (length(out_of_range) > 0L) {
+      cli::cli_abort(
+        c(
+          "{.arg cells} contains values outside {.arg x}.",
+          "i" = "{.arg x} has {terra::ncell(x)} cells; out of range: {.val {out_of_range}}."
+        )
+      )
+    }
+  }
+
+  # Extract the requested pixels as a matrix with cell numbers as row names
+  if (!is.null(cells)) {
+    # Cells mode: read only the requested cells, in the caller's order
+    spectra <- x[cells] |>
+      as.matrix()
+
+    rownames(spectra) <- cells
+  } else if (is.finite(n)) {
+    # Sample mode: random pixels, read without materialising the whole raster
+    sampled <- terra::spatSample(
+      x,
+      size = as.integer(n),
+      method = "random",
+      na.rm = TRUE,
+      cells = TRUE,
+      values = TRUE
+    )
+
+    band_cols <- setdiff(names(sampled), "cell")
+
+    spectra <- sampled[, band_cols, drop = FALSE] |>
+      as.matrix()
+
+    rownames(spectra) <- sampled[["cell"]]
+  } else {
+    # All mode: every pixel (n = Inf) — deliberate full materialisation
+    spectra <- terra::values(x, mat = TRUE)
+
+    rownames(spectra) <- seq_len(nrow(spectra))
+  }
+
+  # Carry exact band-name strings as column names
+  colnames(spectra) <- terra::names(x)
+
+  # Drop background (fully-NA) pixels
+  background <- rowSums(is.na(spectra)) == ncol(spectra)
+
+  if (!is.null(cells) && any(background)) {
+    cli::cli_warn(
+      c(
+        "Some requested {.arg cells} are empty (background) and were dropped.",
+        "i" = "Dropped cells: {.val {rownames(spectra)[background]}}."
+      )
+    )
+  }
+
+  spectra <- spectra[!background, , drop = FALSE]
+
+  # Return result
+  spectra
 }
