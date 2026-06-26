@@ -4,48 +4,50 @@
 \alias{hsi_plot_endmembers}
 \title{Plot endmember spectra}
 \usage{
-hsi_plot_endmembers(spectra)
+hsi_plot_endmembers(x)
 }
 \arguments{
-\item{spectra}{A numeric matrix of spectra, bands in rows and named spectra in
-columns, such as the \code{spectra} component of \code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}}.
-Wavelengths are read from the row names; endmember labels from the column
-names.}
+\item{x}{A numeric matrix of endmember spectra with wavelengths (nm) as row
+names and endmember labels as column names, as produced by
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} (\code{em$spectra}).}
 }
 \value{
-A \link[ggplot2:ggplot]{ggplot} object with one line per spectrum.
+A \code{\link[ggplot2:ggplot]{ggplot2::ggplot}} object. Extend with \code{+} to add labels,
+themes, or colour scales.
 }
 \description{
 Plot endmember spectra
 }
 \details{
-A plotter, nothing more: it draws whatever spectra matrix it is handed. To
-compare representations — reflectance, continuum-removed, first derivative —
-transform the spectra first and call the function once per representation,
-combining the panels with \code{patchwork}. Keeping a single panel per call is what
-keeps it representation-agnostic.
+Produces a minimal multi-line plot of reflectance against wavelength, one
+coloured line per endmember. Internally the wide matrix is reshaped to the
+same long form used by \code{\link[=hsi_plot_spectrum]{hsi_plot_spectrum()}} (\code{wavelength}, \code{value}, plus
+an \code{endmember} grouping column), so the two plotters share a single data
+contract. Endmember order in the legend follows column order in \code{x}.
 
-Wavelengths for the x-axis are read from the row names of \code{spectra} (the band
-names carried through by \code{\link[=hsi_extract_spectra]{hsi_extract_spectra()}}), falling back to band index
-when the names are not numeric. Labels come from the column names, falling back
-to \code{EM1..EMn}.
+The returned ggplot carries no theme or axis labels — add these with \code{+}
+using standard ggplot2 conventions.
 }
 \examples{
 \dontrun{
-spectra <- hsi_extract_spectra(x, n = 1000)
+x <- terra::rast("REFLECTANCE_testdata.tif")
+spectra <- hsi_extract_spectra(x, n = 5000)
 red <- stats::prcomp(spectra, center = TRUE, scale. = FALSE)
-em <- hsi_calc_endmembers(spectra, reduction = red, n_endmembers = 4)
+em <- hsi_calc_endmembers(spectra, reduction = red, n_endmembers = 6)
 
-hsi_plot_endmembers(em$spectra)
+# Quick plot
+x_plot <- hsi_plot_endmembers(em$spectra)
 
-# Continuum-removed panel: transform first, then plot.
-hsi_plot_endmembers(hsi_remove_continuum(em$spectra))
+# Add labels and theme with ggplot2
+x_plot +
+  ggplot2::labs(x = "Wavelength (nm)", y = "Reflectance", colour = "Endmember") +
+  ggplot2::theme_minimal()
 }
 
 }
 \seealso{
-\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} for the \code{spectra} matrix, \code{\link[=hsi_calc_sam]{hsi_calc_sam()}} for the
-numerical separation between the same spectra, and \code{\link[patchwork:wrap_plots]{patchwork::wrap_plots()}}
-to combine multiple representation panels.
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} to produce the input matrix.
+\code{\link[=hsi_calc_sam]{hsi_calc_sam()}} for the pairwise redundancy diagnostic.
+\code{\link[=hsi_plot_spectrum]{hsi_plot_spectrum()}} for a single spectrum.
 }
 \concept{Plotting}

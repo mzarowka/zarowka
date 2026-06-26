@@ -7,7 +7,6 @@
 hsi_calc_abundance(
   x,
   endmembers,
-  method = "nnls",
   cores = 1,
   filename = "",
   overwrite = FALSE,
@@ -21,9 +20,6 @@ hsi_calc_abundance(
 endmembers in columns, as returned in the \code{spectra} component of
 \code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}}. Must have one row per layer of \code{x}. Column names,
 when present, become the output layer names.}
-
-\item{method}{Character. Unmixing estimator. One of \code{"nnls"} (non-negative
-least squares) or \code{"ols"} (ordinary least squares). Default \code{"nnls"}.}
 
 \item{cores}{Positive integer. Number of parallel cores. Default \code{1}.}
 
@@ -41,14 +37,14 @@ per endmember, sharing the geometry of \code{x}.
 Unmix a hyperspectral raster into per-endmember abundances
 }
 \details{
-Each pixel spectrum is decomposed as a linear combination of the supplied
-endmember spectra, producing one output layer per endmember on the same grid
-as \code{x}. \code{"nnls"} constrains abundances to be non-negative without forcing them
-to sum to one, which suits scenes with albedo and shade variation. \code{"ols"} is
-unconstrained and faster but can return negative abundances. Wavelength
-correspondence between \code{x} and \code{endmembers} is the caller's responsibility:
-the function checks band count, not band alignment. Fully \code{NA} (background)
-pixels return \code{NA} abundances.
+Each pixel spectrum is decomposed as a non-negative linear combination of the
+supplied endmember spectra by non-negative least squares (Lawson & Hanson
+1974, via the \pkg{nnls} package), producing one output layer per endmember
+on the same grid as \code{x}. Abundances are constrained to be non-negative
+without being forced to sum to one, which suits scenes with albedo and shade
+variation. Wavelength correspondence between \code{x} and \code{endmembers} is the
+caller's responsibility: the function checks band count, not band alignment.
+Fully \code{NA} (background) pixels return \code{NA} abundances.
 }
 \examples{
 \dontrun{
@@ -60,7 +56,6 @@ x_abundance <- hsi_calc_abundance(x, endmembers = em$spectra)
 x_abundance <- hsi_calc_abundance(
   x,
   endmembers = em$spectra,
-  method = "ols",
   cores = 4,
   filename = "abundance.tif",
   overwrite = TRUE
@@ -68,9 +63,14 @@ x_abundance <- hsi_calc_abundance(
 }
 
 }
+\references{
+Lawson, C. L. & Hanson, R. J. (1974). \emph{Solving Least Squares Problems}.
+Prentice-Hall (reprinted as SIAM Classics in Applied Mathematics, 1995).
+}
 \seealso{
 Other HSI Unmixing:
 \code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}},
-\code{\link[=hsi_calc_sam]{hsi_calc_sam()}}
+\code{\link[=hsi_calc_sam]{hsi_calc_sam()}},
+\code{\link[=hsi_extract_spectra]{hsi_extract_spectra()}}
 }
 \concept{HSI Unmixing}

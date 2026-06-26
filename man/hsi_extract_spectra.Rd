@@ -2,50 +2,79 @@
 % Please edit documentation in R/hsi_extract_spectra.R
 \name{hsi_extract_spectra}
 \alias{hsi_extract_spectra}
-\title{Extract a pixel-by-band matrix from a hyperspectral raster}
+\title{Extract a spectra matrix from a hyperspectral raster}
 \usage{
-hsi_extract_spectra(x, n = NULL)
+hsi_extract_spectra(x, n = NULL, cells = NULL)
 }
 \arguments{
 \item{x}{A \code{\link[terra:SpatRaster-class]{SpatRaster}} with hyperspectral data.}
 
-\item{n}{Positive integer. Number of pixels to randomly sample, or \code{NULL} to
-take every pixel. Default \code{NULL}.}
+\item{n}{Positive number. Pixels to randomly sample, or \code{Inf} to take every
+valid pixel. Default \code{NULL}.}
+
+\item{cells}{Numeric vector of \code{\link[terra:terra-package]{terra}} cell numbers
+to fetch, in the returned row order. Default \code{NULL}.}
 }
 \value{
-A numeric matrix with one row per extracted pixel and one column per
-band, band names as column names and source cell numbers as row names.
+A numeric matrix of pixels (rows) by bands (columns), with cell
+numbers as row names and band names as column names.
 }
 \description{
-Extract a pixel-by-band matrix from a hyperspectral raster
+Extract a spectra matrix from a hyperspectral raster
 }
 \details{
-One raster in, one matrix out. To restrict to a region of interest, crop and
-mask with \code{\link[terra:crop]{terra::crop()}} / \code{\link[terra:mask]{terra::mask()}} beforehand. To pool several
-scenes, bind them with \code{\link[=hsi_bind_rows]{hsi_bind_rows()}} beforehand. Either way the function
-only ever sees a single raster, and the returned cell numbers index that
-raster.
+Exactly one of \code{n} or \code{cells} must be supplied; they are mutually exclusive.
+A bare call with neither errors on purpose, so that materialising every pixel
+of a large raster is always a deliberate choice (\code{n = Inf}) rather than a
+silent default.
 
-Sampling uses the ambient random state; call \code{\link[=set.seed]{set.seed()}} beforehand for
-reproducible extraction. Pixels that are entirely \code{NA} (no data) are dropped;
-pixels with some \code{NA} bands are kept, since trimming bad or edge bands is the
-caller's responsibility — pass an already-trimmed \code{x}. Taking every pixel
-(\code{n = NULL}) pulls the whole raster into memory, so set an explicit \code{n} on
-large scenes.
+The three modes map to the cheapest read for the job:
+\itemize{
+\item \code{n} (finite) samples random pixels via \code{\link[terra:spatSample]{terra::spatSample()}} without
+reading the whole raster.
+\item \code{n = Inf} reads every pixel via \code{\link[terra:values]{terra::values()}} — the deliberate
+full-materialisation path.
+\item \code{cells} reads only the requested cells.
+}
+
+Cell numbers are a stable address: across co-registered rasters of the same
+geometry (e.g. reflectance, Savitzky-Golay, continuum-removed), the same cell
+number refers to the same physical pixel. Passing \code{cells = em$locations} from
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} therefore re-fetches the spectra of the chosen
+endmember pixels in whatever processing space \code{x} represents. Ensuring \code{x} is
+co-registered with the raster the cells came from is the caller's
+responsibility; only the cell-number range is checked.
+
+Background pixels (fully \code{NA} rows) are dropped. In \code{cells} mode any requested
+cell that is background is dropped with a warning, since that breaks the
+one-to-one mapping the caller may expect.
 }
 \examples{
 \dontrun{
 x <- terra::rast("REFLECTANCE_testdata.tif")
 
-# Random sample across the scene.
-fit <- hsi_extract_spectra(x, n = 5000)
+# Random sample for endmember search
+x_spectra <- hsi_extract_spectra(x, n = 5000)
 
-# Region of interest: crop and mask first, then extract.
-roi <- terra::vect("roi.gpkg")
-fit <- terra::crop(x, roi) |>
-  terra::mask(roi) |>
-  hsi_extract_spectra(n = 5000)
+# Every valid pixel (small rasters only)
+x_spectra <- hsi_extract_spectra(x, n = Inf)
+
+# Re-fetch the endmember pixels in another co-registered space
+red <- stats::prcomp(x_spectra, center = TRUE, scale. = FALSE)
+em <- hsi_calc_endmembers(x_spectra, reduction = red, n_endmembers = 6)
+
+x_conrem <- terra::rast("CONREM_testdata.tif")
+x_spectra_conrem <- hsi_extract_spectra(x_conrem, cells = em$locations)
 }
 
 }
-\concept{HSI Extraction}
+\seealso{
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} which produces the \code{locations} to pass as \code{cells}.
+\code{\link[=hsi_plot_endmembers]{hsi_plot_endmembers()}} and \code{\link[=hsi_calc_sam]{hsi_calc_sam()}} for what the matrix feeds.
+
+Other HSI Unmixing:
+\code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}},
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}},
+\code{\link[=hsi_calc_sam]{hsi_calc_sam()}}
+}
+\concept{HSI Unmixing}

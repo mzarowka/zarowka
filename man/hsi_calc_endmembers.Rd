@@ -78,6 +78,7 @@ end-member determination in hyperspectral data. In M. R. Descour, S. S. Shen
 \seealso{
 Other HSI Unmixing:
 \code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}},
-\code{\link[=hsi_calc_sam]{hsi_calc_sam()}}
+\code{\link[=hsi_calc_sam]{hsi_calc_sam()}},
+\code{\link[=hsi_extract_spectra]{hsi_extract_spectra()}}
 }
 \concept{HSI Unmixing}

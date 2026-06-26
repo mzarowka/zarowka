@@ -56,6 +56,7 @@ Workshop}, JPL Publication 92-14, vol. 1, 147–149.
 \seealso{
 Other HSI Unmixing:
 \code{\link[=hsi_calc_abundance]{hsi_calc_abundance()}},
-\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}}
+\code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}},
+\code{\link[=hsi_extract_spectra]{hsi_extract_spectra()}}
 }
 \concept{HSI Unmixing}
