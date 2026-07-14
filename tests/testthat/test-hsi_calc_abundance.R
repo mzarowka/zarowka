@@ -1,9 +1,9 @@
 # Test hsi_calc_abundance ----
 # Unmixes a hyperspectral raster into per-endmember abundance layers via
-# per-pixel linear unmixing (NNLS or OLS).
-# Key contracts: one output layer per endmember; abundances recover exactly
-# for noiseless linear mixtures; NNLS abundances are non-negative; band-count
-# mismatch and bad method error.
+# per-pixel non-negative least squares.
+# Key contracts: one output layer per endmember; layer names come from the
+# endmember columns; abundances recover exactly for noiseless linear mixtures
+# and are never negative; band-count mismatch errors.
 
 ## Setup ----
 test_reflectance <- terra::rast(
@@ -77,44 +77,21 @@ test_that("hsi_calc_abundance falls back to EM names for unnamed endmembers", {
   expect_equal(names(result), c("EM1", "EM2", "EM3"))
 })
 
-test_that("hsi_calc_abundance index_name overrides endmember column names", {
-  result <- hsi_calc_abundance(
-    test_reflectance,
-    test_endmembers,
-    index_name = c("a", "b", "c")
-  )
-
-  expect_equal(names(result), c("a", "b", "c"))
-})
-
 # ── Value sanity ─────────────────────────────────────────────────────────────
 
 test_that("hsi_calc_abundance recovers known abundances for a noiseless mixture", {
-  result <- hsi_calc_abundance(test_mixture, test_endmembers, method = "ols")
+  result <- hsi_calc_abundance(test_mixture, test_endmembers)
 
   recovered <- terra::values(result)
   max_abs_error <- max(abs(recovered - true_abundance))
 
-  # Exact linear system; only floating-point error should remain.
+  # Exact linear system, and the planted abundances are non-negative, so NNLS
+  # is unconstrained here: only floating-point error should remain.
   expect_lte(max_abs_error, 1e-6)
 })
 
-test_that("hsi_calc_abundance NNLS recovers non-negative known abundances", {
-  result <- hsi_calc_abundance(test_mixture, test_endmembers, method = "nnls")
-
-  recovered <- terra::values(result)
-  max_abs_error <- max(abs(recovered - true_abundance))
-
-  # True abundances were drawn non-negative, so NNLS must match OLS here.
-  expect_lte(max_abs_error, 1e-6)
-})
-
-test_that("hsi_calc_abundance NNLS produces only non-negative abundances", {
-  result <- hsi_calc_abundance(
-    test_reflectance,
-    test_endmembers,
-    method = "nnls"
-  )
+test_that("hsi_calc_abundance produces only non-negative abundances", {
+  result <- hsi_calc_abundance(test_reflectance, test_endmembers)
   values <- terra::values(result, na.rm = TRUE)
 
   expect_true(all(values >= 0))
@@ -183,8 +160,10 @@ test_that("hsi_calc_abundance errors when endmember rows do not match layers", {
   )
 })
 
-test_that("hsi_calc_abundance errors with an unknown method", {
+test_that("hsi_calc_abundance errors when an unused argument is passed without filename", {
   expect_error(
-    hsi_calc_abundance(test_reflectance, test_endmembers, method = "fcls")
+    hsi_calc_abundance(test_reflectance, test_endmembers, method = "fcls"),
+    "not used",
+    class = "hsitools_error"
   )
 })

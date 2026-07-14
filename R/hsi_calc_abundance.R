@@ -65,6 +65,9 @@ hsi_calc_abundance <- function(
     ))
   }
 
+  wopt_user <- rlang::list2(...)
+  HSItools:::check_dots_write(wopt_user, filename)
+
   # Output layer names from endmember columns
   layer_names <- colnames(endmembers) %||%
     paste0("EM", seq_len(ncol(endmembers)))
@@ -85,7 +88,6 @@ hsi_calc_abundance <- function(
 
   # Build write options
   wopt_default <- list(names = layer_names)
-  wopt_user <- rlang::list2(...)
   wopt <- purrr::list_modify(wopt_default, !!!wopt_user)
 
   # Write to file

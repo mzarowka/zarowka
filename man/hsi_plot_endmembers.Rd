@@ -21,7 +21,7 @@ Plot endmember spectra
 \details{
 Produces a minimal multi-line plot of reflectance against wavelength, one
 coloured line per endmember. Internally the wide matrix is reshaped to the
-same long form used by \code{\link[=hsi_plot_spectrum]{hsi_plot_spectrum()}} (\code{wavelength}, \code{value}, plus
+same long form used by \code{\link[HSItools:hsi_plot_spectrum]{hsi_plot_spectrum()}} (\code{wavelength}, \code{value}, plus
 an \code{endmember} grouping column), so the two plotters share a single data
 contract. Endmember order in the legend follows column order in \code{x}.
 
@@ -48,6 +48,6 @@ x_plot +
 \seealso{
 \code{\link[=hsi_calc_endmembers]{hsi_calc_endmembers()}} to produce the input matrix.
 \code{\link[=hsi_calc_sam]{hsi_calc_sam()}} for the pairwise redundancy diagnostic.
-\code{\link[=hsi_plot_spectrum]{hsi_plot_spectrum()}} for a single spectrum.
+\code{\link[HSItools:hsi_plot_spectrum]{hsi_plot_spectrum()}} for a single spectrum.
 }
 \concept{Plotting}

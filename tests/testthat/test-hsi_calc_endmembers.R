@@ -1,10 +1,14 @@
 # Test hsi_calc_endmembers ----
-# Extracts endmembers from a pooled pixel table via VCA-seeded N-FINDR on a
-# PCA-reduced search space.
-# Key contracts: returns the documented list shape; spectra are bands x
-# endmembers in reflectance space; pure planted pixels are recovered as
-# endmembers; provenance flows through to locations; bad n_endmembers and
-# unimplemented reduction error.
+# Extracts endmembers from a pixel matrix via VCA-seeded N-FINDR, searching in
+# the score space of a caller-fitted reduction.
+# Key contracts:
+#   - Takes a numeric matrix (pixels x bands) and a fitted reduction model
+#   - Returns list(spectra, indices, locations)
+#   - `spectra` is bands x endmembers, in the original band space
+#   - Pure planted pixels are recovered as the simplex vertices
+#   - `locations` carries source cell numbers from the matrix rownames, or is
+#     NULL when there are none
+#   - Bad n_endmembers errors
 
 ## Setup ----
 skip_if_not_installed("unmixR")
@@ -26,116 +30,115 @@ pixels <- rbind(planted, mixed)
 band_names <- as.character(round(seq(1000, 2500, length.out = n_bands), 1))
 colnames(pixels) <- band_names
 
-# Fit table with provenance: the three pure pixels are rows 1:3.
-test_fit <- tibble::as_tibble(pixels) |>
-  tibble::add_column(
-    scene = "scene_a",
-    roi = 1L,
-    cell = seq_len(nrow(pixels)),
-    .before = 1
-  )
-
+# The pure pixels are rows 1:3.
 pure_idx <- 1:3
+
+# Cell numbers as rownames, the way hsi_extract_spectra() hands them over.
+test_spectra <- pixels
+rownames(test_spectra) <- seq_len(nrow(test_spectra))
+
+# The caller fits the reduction and passes it in.
+test_reduction <- stats::prcomp(test_spectra, center = TRUE, scale. = FALSE)
 
 # ── Output structure ─────────────────────────────────────────────────────────
 
 test_that("hsi_calc_endmembers returns the documented list components", {
   set.seed(1)
-  em <- hsi_calc_endmembers(test_fit, n_endmembers = 3)
+  em <- hsi_calc_endmembers(test_spectra, test_reduction, n_endmembers = 3)
 
-  expect_named(
-    em,
-    c("spectra", "indices", "locations", "model", "diagnostics")
-  )
+  expect_type(em, "list")
+  expect_named(em, c("spectra", "indices", "locations"))
 })
 
 test_that("hsi_calc_endmembers spectra are bands x endmembers", {
   set.seed(1)
-  em <- hsi_calc_endmembers(test_fit, n_endmembers = 3)
+  em <- hsi_calc_endmembers(test_spectra, test_reduction, n_endmembers = 3)
 
   expect_equal(nrow(em$spectra), n_bands)
   expect_equal(ncol(em$spectra), 3)
 })
 
-test_that("hsi_calc_endmembers spectra carry wavelength rownames and EM colnames", {
+test_that("hsi_calc_endmembers spectra carry band rownames and EM colnames", {
   set.seed(1)
-  em <- hsi_calc_endmembers(test_fit, n_endmembers = 3)
+  em <- hsi_calc_endmembers(test_spectra, test_reduction, n_endmembers = 3)
 
   expect_equal(rownames(em$spectra), band_names)
   expect_equal(colnames(em$spectra), c("EM1", "EM2", "EM3"))
 })
 
-# ── Column contracts ─────────────────────────────────────────────────────────
+# ── Endmember recovery ───────────────────────────────────────────────────────
 
-test_that("hsi_calc_endmembers locations carry provenance for each endmember", {
+test_that("hsi_calc_endmembers recovers the planted pure pixels", {
   set.seed(1)
-  em <- hsi_calc_endmembers(test_fit, n_endmembers = 3)
+  em <- hsi_calc_endmembers(test_spectra, test_reduction, n_endmembers = 3)
 
-  expect_named(em$locations, c("endmember", "scene", "roi", "cell"))
-  expect_equal(nrow(em$locations), 3)
+  expect_setequal(em$indices, pure_idx)
 })
 
-test_that("hsi_calc_endmembers returns NULL locations without provenance", {
+test_that("hsi_calc_endmembers spectra match the planted spectra it selected", {
   set.seed(1)
-  bare <- tibble::as_tibble(pixels)
+  em <- hsi_calc_endmembers(test_spectra, test_reduction, n_endmembers = 3)
 
-  em <- hsi_calc_endmembers(bare, n_endmembers = 3)
+  # Columns come back in the search's order, so compare as unordered sets of
+  # spectra: every returned endmember is one of the planted ones.
+  returned <- unname(as.data.frame(em$spectra))
+  expected <- unname(as.data.frame(t(planted)))
+
+  expect_setequal(as.list(returned), as.list(expected))
+})
+
+# ── Locations ────────────────────────────────────────────────────────────────
+
+test_that("hsi_calc_endmembers locations are cell numbers named by endmember", {
+  set.seed(1)
+  em <- hsi_calc_endmembers(test_spectra, test_reduction, n_endmembers = 3)
+
+  expect_type(em$locations, "integer")
+  expect_named(em$locations, c("EM1", "EM2", "EM3"))
+  expect_equal(
+    unname(em$locations),
+    as.integer(rownames(test_spectra)[em$indices])
+  )
+})
+
+test_that("hsi_calc_endmembers locations are NULL without cell rownames", {
+  bare <- pixels
+  rownames(bare) <- NULL
+
+  set.seed(1)
+  em <- hsi_calc_endmembers(bare, test_reduction, n_endmembers = 3)
 
   expect_null(em$locations)
 })
 
-test_that("hsi_calc_endmembers diagnostics list all unique endmember pairs", {
-  set.seed(1)
-  em <- hsi_calc_endmembers(test_fit, n_endmembers = 3)
-
-  # choose(3, 2) = 3 unordered pairs
-  expect_equal(nrow(em$diagnostics), 3)
-  expect_named(em$diagnostics, c("a", "b", "angle"))
-})
-
-# ── Value sanity ─────────────────────────────────────────────────────────────
-
-test_that("hsi_calc_endmembers recovers the planted pure pixels", {
-  set.seed(1)
-  em <- hsi_calc_endmembers(test_fit, n_endmembers = 3)
-
-  # The three pure pixels are the simplex vertices; their cells are 1:3.
-  expect_setequal(em$indices, pure_idx)
-})
-
-test_that("hsi_calc_endmembers diagnostics angles are finite and non-negative", {
-  set.seed(1)
-  em <- hsi_calc_endmembers(test_fit, n_endmembers = 3)
-
-  expect_true(all(is.finite(em$diagnostics$angle)))
-  expect_true(all(em$diagnostics$angle >= 0))
-})
-
 # ── Input validation ─────────────────────────────────────────────────────────
 
-test_that("hsi_calc_endmembers errors when n_endmembers exceeds band count", {
+test_that("hsi_calc_endmembers errors when spectra is not a numeric matrix", {
   expect_error(
-    hsi_calc_endmembers(test_fit, n_endmembers = n_bands + 1),
-    "between 2 and"
+    hsi_calc_endmembers(
+      tibble::as_tibble(pixels),
+      test_reduction,
+      n_endmembers = 3
+    ),
+    "numeric matrix"
   )
 })
 
 test_that("hsi_calc_endmembers errors when n_endmembers is below 2", {
   expect_error(
-    hsi_calc_endmembers(test_fit, n_endmembers = 1),
-    "between 2 and"
+    hsi_calc_endmembers(test_spectra, test_reduction, n_endmembers = 1),
+    "at least 2"
   )
 })
 
-test_that("hsi_calc_endmembers errors for the unimplemented mnf reduction", {
+test_that("hsi_calc_endmembers errors when n_endmembers exceeds the components", {
+  # The reduction of a 40-band matrix yields 40 components.
   expect_error(
-    hsi_calc_endmembers(test_fit, n_endmembers = 3, reduction = "mnf"),
-    "not implemented"
-  )
-})
-
-test_that("hsi_calc_endmembers errors for an unknown reduction", {
-  expect_error(
-    hsi_calc_endmembers(test_fit, n_endmembers = 3, reduction = "ica")
+    hsi_calc_endmembers(
+      test_spectra,
+      test_reduction,
+      n_endmembers = n_bands + 1
+    ),
+    "must not exceed"
   )
 })
