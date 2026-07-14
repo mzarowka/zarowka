@@ -1,2 +1,4 @@
 ^zarowka\.Rproj$
 ^\.Rproj\.user$
+^[.]?air[.]toml$
+^\.vscode$

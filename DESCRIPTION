@@ -8,11 +8,15 @@ License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-Imports: 
+Imports:
     cli,
+    dplyr,
     fs,
     pak,
     purrr,
+    rlang,
+    terra,
+    tibble,
     utils,
     whisker
 Depends: 
