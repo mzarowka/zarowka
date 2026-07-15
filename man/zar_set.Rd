@@ -6,6 +6,9 @@
 \usage{
 zar_set()
 }
+\value{
+\code{NULL}, invisibly.
+}
 \description{
 Install pak and purrr before using zar_install
 }

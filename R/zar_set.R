@@ -1,12 +1,12 @@
 #' Install pak and purrr before using zar_install
 #'
-#' @returns NULL
+#' @returns `NULL`, invisibly.
 #'
 #' @export
 zar_set <- function() {
-  # Install pak
-  utils::install.packages("pak")
-
-  # Install purrr
+  if (!requireNamespace("pak", quietly = TRUE)) {
+    utils::install.packages("pak")
+  }
   pak::pkg_install("purrr")
+  invisible(NULL)
 }

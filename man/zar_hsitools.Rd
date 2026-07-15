@@ -7,7 +7,10 @@
 zar_hsitools(branch = "dev")
 }
 \arguments{
-\item{branch}{which branch to use. Default "dev".}
+\item{branch}{Character. Which branch to install. Default \code{"dev"}.}
+}
+\value{
+\code{NULL}, invisibly. Called for its side effect.
 }
 \description{
 Install HSItools from GitHub

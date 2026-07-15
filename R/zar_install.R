@@ -1,6 +1,6 @@
-#' Install Maury's choince of packages with pak
+#' Install Maury's choice of packages with pak
 #'
-#' @returns NULL
+#' @returns `NULL`, invisibly.
 #'
 #' @export
 zar_install <- function() {
@@ -92,7 +92,7 @@ zar_install <- function() {
     "supercells",
     "glmnet",
     "leaflet",
-    "whithr",
+    "withr",
     "carrier",
     "ggvegan",
     "automap",
@@ -102,12 +102,23 @@ zar_install <- function() {
     "devtools"
   )
 
-  # Install packages
-  # Do not install as one vector passed to function
-  # - will fail due to dependencies conflict
-  # Instead walk
-  packages |>
-    purrr::walk(purrr::possibly(\(i) {
-      pak::pkg_install(i, ask = FALSE, upgrade = TRUE)
+  # Install one at a time; a single vector install has conflicted historically.
+  # Collect failures instead of swallowing them.
+  results <- packages |>
+    purrr::map(purrr::safely(\(pkg) {
+      pak::pkg_install(pkg, ask = FALSE, upgrade = TRUE)
     }))
+
+  failed <- packages[purrr::map_lgl(results, \(r) !is.null(r$error))]
+
+  if (length(failed) > 0) {
+    cli::cli_warn(c(
+      "Failed to install {length(failed)} of {length(packages)} package{?s}:",
+      "x" = "{.pkg {failed}}"
+    ))
+  } else {
+    cli::cli_alert_success("Installed all {length(packages)} packages.")
+  }
+
+  invisible(NULL)
 }
