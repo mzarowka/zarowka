@@ -2,10 +2,13 @@
 % Please edit documentation in R/zar_install.R
 \name{zar_install}
 \alias{zar_install}
-\title{Install Maury's choince of packages with pak}
+\title{Install Maury's choice of packages with pak}
 \usage{
 zar_install()
 }
+\value{
+\code{NULL}, invisibly.
+}
 \description{
-Install Maury's choince of packages with pak
+Install Maury's choice of packages with pak
 }

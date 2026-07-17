@@ -1,15 +1,11 @@
 #' Install HSItools from GitHub
 #'
-#' @param branch which branch to use. Default "dev".
+#' @param branch Character. Which branch to install. Default `"dev"`.
 #'
-#' @returns NULL
+#' @returns `NULL`, invisibly. Called for its side effect.
 #'
 #' @export
 zar_hsitools <- function(branch = "dev") {
-  # Install from dev, default
-  if (branch == "dev") {
-    pak::pkg_install("mzarowka/HSItools@dev")
-  } else {
-    pak::pkg_install("mzarowka/HSItools")
-  }
+  pak::pkg_install(paste0("mzarowka/HSItools@", branch))
+  invisible(NULL)
 }

@@ -7,8 +7,13 @@
 zar_update()
 }
 \value{
-NULL invisibly
+\code{NULL}, invisibly.
 }
 \description{
 Update packages with pak
+}
+\details{
+\code{utils::old.packages()} only compares against configured repos (CRAN),
+so GitHub-sourced packages such as HSItools and unmixR are never updated here.
+Use \code{\link[=zar_hsitools]{zar_hsitools()}} for HSItools.
 }
