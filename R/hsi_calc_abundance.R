@@ -65,6 +65,10 @@ hsi_calc_abundance <- function(
     ))
   }
 
+  rlang::check_string(filename)
+
+  rlang::check_bool(overwrite)
+
   wopt_user <- rlang::list2(...)
   HSItools:::check_dots_write(wopt_user, filename)
 

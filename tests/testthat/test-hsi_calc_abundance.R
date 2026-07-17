@@ -147,6 +147,13 @@ test_that("hsi_calc_abundance errors when file exists and overwrite = FALSE", {
 
 # ── Input validation ─────────────────────────────────────────────────────────
 
+test_that("hsi_calc_abundance validates filename and overwrite", {
+  expect_write_tail_validated(
+    hsi_calc_abundance,
+    list(x = test_reflectance, endmembers = test_endmembers)
+  )
+})
+
 test_that("hsi_calc_abundance errors with non-SpatRaster input", {
   expect_error(hsi_calc_abundance("not a raster", test_endmembers))
 })

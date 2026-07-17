@@ -168,6 +168,13 @@ test_that("hsi_check_saturation errors when file exists and overwrite is FALSE",
 
 # ── Input validation ─────────────────────────────────────────────────────────
 
+test_that("hsi_check_saturation validates filename and overwrite", {
+  expect_write_tail_validated(
+    hsi_check_saturation,
+    list(x = test_capture, limit = test_limit)
+  )
+})
+
 test_that("hsi_check_saturation errors with non-SpatRaster input", {
   expect_error(
     hsi_check_saturation(x = "not a raster", limit = test_limit)

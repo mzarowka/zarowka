@@ -132,6 +132,13 @@ test_that("hsi_apply_reduction errors when file exists and overwrite = FALSE", {
 
 # ── Input validation ─────────────────────────────────────────────────────────
 
+test_that("hsi_apply_reduction validates filename and overwrite", {
+  expect_write_tail_validated(
+    hsi_apply_reduction,
+    list(x = test_clean, model = pca_model)
+  )
+})
+
 test_that("hsi_apply_reduction errors with non-SpatRaster input", {
   expect_error(hsi_apply_reduction(x = "not a raster", model = pca_model))
 })

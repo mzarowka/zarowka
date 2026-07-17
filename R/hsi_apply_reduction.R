@@ -76,6 +76,10 @@ hsi_apply_reduction <- function(
     ))
   }
 
+  rlang::check_string(filename)
+
+  rlang::check_bool(overwrite)
+
   # Build write options
   wopt_default <- list(names = info$names)
   wopt_user <- rlang::list2(...)

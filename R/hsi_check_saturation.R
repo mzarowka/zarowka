@@ -87,6 +87,10 @@ hsi_check_saturation <- function(
   HSItools:::check_numeric(limit, len = 1)
   rlang::check_bool(collapse)
 
+  rlang::check_string(filename)
+
+  rlang::check_bool(overwrite)
+
   wopt_user <- rlang::list2(...)
   HSItools:::check_dots_write(wopt_user, filename)
 
