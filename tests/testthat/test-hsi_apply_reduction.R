@@ -13,10 +13,11 @@ test_reflectance <- terra::rast(
   )
 )
 
-# Build a clean, NA-free synthetic scene on the fixture geometry. The
-# REFLECTANCE fixture carries NA-prone edge bands (>= 1 NA per pixel across the
-# full stack), which prcomp cannot be fit on directly; a synthetic clean stack
-# keeps the recovery test exact and independent of edge-trim band positions.
+# Build a synthetic scene with known values on the fixture geometry. The
+# recovery test below compares hsi_apply_reduction() against a direct
+# stats::predict() on the same training matrix, so the model must be fit on
+# values under full control here — not the real fixture's reflectance, whose
+# exact numbers this test has no independent way to reproduce.
 template <- terra::subset(test_reflectance, 1:20)
 set.seed(1)
 clean_values <- matrix(
