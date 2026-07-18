@@ -72,6 +72,7 @@ whiteref_snr <- hsi_calc_snr(whiteref)
 \code{\link[=hsi_check_saturation]{hsi_check_saturation()}}
 
 Other HSI Diagnostics:
-\code{\link[=hsi_check_saturation]{hsi_check_saturation()}}
+\code{\link[=hsi_check_saturation]{hsi_check_saturation()}},
+\code{\link[=hsi_check_signal]{hsi_check_signal()}}
 }
 \concept{HSI Diagnostics}

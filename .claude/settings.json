@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(air format R/hsi_check_signal.R tests/testthat/test-hsi_check_signal.R)",
+      "PowerShell(Rscript -e \"devtools::document\\(\\); devtools::test\\(filter='hsi_check_signal'\\)\" 2>&1)"
+    ]
+  }
+}

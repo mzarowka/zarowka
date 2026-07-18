@@ -94,6 +94,7 @@ x_any <- hsi_check_saturation(
 \code{\link[=hsi_calc_snr]{hsi_calc_snr()}}
 
 Other HSI Diagnostics:
-\code{\link[=hsi_calc_snr]{hsi_calc_snr()}}
+\code{\link[=hsi_calc_snr]{hsi_calc_snr()}},
+\code{\link[=hsi_check_signal]{hsi_check_signal()}}
 }
 \concept{HSI Diagnostics}
