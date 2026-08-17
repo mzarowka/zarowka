@@ -354,7 +354,8 @@ test_that("hsi_check_signal errors when k is not a positive finite number", {
   )
 
   # NaN slips past a plain sign test (NaN <= 0 is NA), so it gets its own
-  # assertion: the abort must still be authored, never a bare condition error.
+  # assertion: the abort must stay a hsitools_error, never a bare condition
+  # error. Guarded upstream by HSItools check_numeric(positive = TRUE).
   expect_error(
     hsi_check_signal(x = test_capture, darkref = test_dark, k = NaN),
     class = "hsitools_error"

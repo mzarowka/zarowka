@@ -1,7 +1,7 @@
 # FEATURES -------------------------------------------------------------------
 # PCA and MNF on smoothed and continuum-removed reflectance
 # Always open at the core level, rather than for example a site level
-# Run postprocess before this script
+# Run 04_postprocess.R before this script
 
 # Setup ----------------------------------------------------------------------
 
@@ -14,20 +14,18 @@ library(mirai)
 # Identity -------------------------------------------------------------------
 # Use bare folder names only, not full paths
 
-sensor <- "vnir"
+sensor <- "{{{sensor}}}"
+
 capture <- "{{{capture}}}"
+
 cores <- 4
 
 # Set to TRUE to recompute outputs that already exist on disk
 force_recompute <- FALSE
 
-n_components <- {
-  {
-    {
-      n_components
-    }
-  }
-}
+# Quoted deliberately: air formats this directory, and a bare {{{ }}} placeholder
+# parses as nested R blocks and gets rewritten. Always quote mustache variables.
+n_components <- as.integer("{{{n_components}}}")
 
 # Path constructors ----------------------------------------------------------
 
@@ -132,5 +130,7 @@ if (!requireNamespace("spacetime", quietly = TRUE)) {
 }
 
 mirai::daemons(0)
+
+# Cleanup --------------------------------------------------------------------
 
 gc()

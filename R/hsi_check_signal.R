@@ -140,17 +140,10 @@ hsi_check_signal <- function(
     )
   }
 
-  # Finiteness is checked before sign so that NaN cannot reach a comparison:
-  # NaN <= 0 is NA, which would crash an if() instead of aborting cleanly.
-  HSItools:::check_numeric(k, len = 1)
+  HSItools:::check_numeric(k, len = 1, positive = TRUE)
 
-  if (!is.finite(k) || k <= 0) {
-    cli::cli_abort(
-      "{.arg k} must be a positive finite number, not {.val {k}}.",
-      class = "hsitools_error"
-    )
-  }
-
+  # `fraction` keeps an authored abort: check_numeric() cannot express the upper
+  # bound, and one interval message reads better than two half-answers.
   HSItools:::check_numeric(fraction, len = 1)
 
   if (!is.finite(fraction) || fraction <= 0 || fraction > 1) {

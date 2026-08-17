@@ -14,7 +14,7 @@
       hsi_check_signal(x = test_capture, darkref = test_dark, k = Inf)
     Condition
       Error in `hsi_check_signal()`:
-      ! `k` must be a positive finite number, not Inf.
+      ! `k` must contain only finite values.
 
 ---
 

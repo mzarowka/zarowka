@@ -10,9 +10,9 @@
 > zarowka-specific rules below. Read both at session start.
 >
 > This file carries conventions only. Never add milestone state, session notes,
-> TODOs, or roadmap items here — those live in dated `dev-notes/YYYY-MM-DD_*.md`
-> documents (a local scratchpad: git-ignored via `.gitignore`, build-ignored via
-> `.Rbuildignore`). Never modify this file unless Maury explicitly asks.
+> TODOs, or roadmap items here — those live in dated `YYYY-MM-DD_*.md` documents
+> in the private `hsi_development` repo (folder `zarowka/`), never in this repo.
+> Never modify this file unless Maury explicitly asks.
 
 ---
 
@@ -185,9 +185,10 @@ where zarowka genuinely differs or adds:
    §7, §10) — track it, don't fork it here.
 7. **Masking precedes unmixing, always.** Background/tray pixels corrupt endmember
    search. `../HSItools/CLAUDE.md` §7.
-8. **`dev-notes/` is a local scratchpad** — git-ignored (`.gitignore`) and
-   build-ignored (`.Rbuildignore`). Dated session/roadmap docs live there, never
-   in package source or this file.
+8. **Dated docs live in the private `hsi_development` repo** (folder `zarowka/`),
+   moved there 2026-07-18 — never in package source or this file. The `dev-notes/`
+   entries in `.gitignore`/`.Rbuildignore` stay as a safety net; the folder itself
+   no longer exists here.
 
 ---
 

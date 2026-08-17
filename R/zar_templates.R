@@ -14,18 +14,14 @@ use_template <- function(
   if_exists <- match.arg(if_exists, c("error", "skip", "overwrite"))
 
   # Sanitise path-like variables to bare names
-  if (!is.null(data$capture)) {
-    data$capture <- fs::path_file(data$capture)
-  }
-  if (!is.null(data$reference)) {
-    data$reference <- fs::path_file(data$reference)
-  }
-  if (!is.null(data$darkspec)) {
-    data$darkspec <- fs::path_file(data$darkspec)
-  }
-  if (!is.null(data$vnir_capture)) {
-    data$vnir_capture <- fs::path_file(data$vnir_capture)
-  }
+  path_like <- c("capture", "reference", "darkspec", "vnir_capture")
+
+  data[path_like] <- purrr::map(
+    data[path_like],
+    \(i) if (is.null(i)) NULL else fs::path_file(i)
+  )
+
+  data <- purrr::compact(data)
 
   template_path <- system.file(
     "templates",
@@ -70,8 +66,37 @@ use_template <- function(
 }
 
 
-#' Use VNIR reflectance template
+#' Resolve the capture name and output path for a generator
+#'
+#' When `path` is a directory the capture is inferred from its basename and the
+#' output filename is fixed; when `path` is a file, `capture` must be supplied.
+#'
 #' @param path Destination path (file or directory)
+#' @param capture Capture directory name, or NULL to infer
+#' @param filename Output filename used when `path` is a directory
+#' @return A list with `capture` and `path`
+#' @noRd
+resolve_target <- function(path, capture, filename) {
+  if (fs::is_dir(path)) {
+    capture <- capture %||% fs::path_file(path)
+    path <- fs::path(path, filename)
+  }
+
+  if (is.null(capture)) {
+    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
+  }
+
+  list(capture = capture, path = path)
+}
+
+
+#' Use preview template
+#'
+#' Calibrates three bands for markup in a GIS and writes the geopackage that
+#' every later stage digitises into. Run this first.
+#'
+#' @param path Destination path (file or directory)
+#' @param sensor Sensor name: "vnir" or "swir"
 #' @param capture Capture directory name. If NULL and path is directory,
 #'   inferred from path.
 #' @param reference White reference capture directory name. Defaults to
@@ -81,183 +106,157 @@ use_template <- function(
 #'   sourcing the specimen-side dark from a different session.
 #' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
 #' @export
-zar_template_vnir <- function(
+zar_template_preview <- function(
   path,
+  sensor,
   capture = NULL,
   reference = capture,
   darkspec = capture,
   if_exists = "error"
 ) {
-  if (fs::is_dir(path)) {
-    capture <- capture %||% fs::path_file(path)
-    reference <- reference %||% capture
-    darkspec <- darkspec %||% capture
-    path <- fs::path(path, "01_reflectance.R")
-  }
+  sensor <- match.arg(sensor, c("vnir", "swir"))
 
-  if (is.null(capture)) {
-    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
-  }
+  target <- resolve_target(path, capture, "01_preview.R")
 
   use_template(
-    "reflectance_vnir.R",
-    path,
-    data = list(capture = capture, reference = reference, darkspec = darkspec),
+    paste0("preview_", sensor, ".R"),
+    target$path,
+    data = list(
+      capture = target$capture,
+      reference = reference %||% target$capture,
+      darkspec = darkspec %||% target$capture
+    ),
     if_exists = if_exists
   )
 }
 
 
-#' Use SWIR reflectance template
-#' @param path Destination path (file or directory)
-#' @param capture Capture directory name. If NULL and path is directory,
-#'   inferred from path.
-#' @param reference White reference capture directory name. Defaults to
-#'   `capture` (single-session workflow).
-#' @param darkspec Specimen-side dark reference capture directory name.
-#'   Defaults to `capture` (specimen's own DARKREF). Override only when
-#'   sourcing the specimen-side dark from a different session.
-#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
+#' Use reflectance template
+#'
+#' Calibrates the cube cropped to the transect digitised on the preview. Run
+#' [`zar_template_preview()`] first and digitise `ends`.
+#'
+#' @inheritParams zar_template_preview
 #' @export
-zar_template_swir <- function(
+zar_template_reflectance <- function(
   path,
+  sensor,
   capture = NULL,
   reference = capture,
   darkspec = capture,
   if_exists = "error"
 ) {
-  if (fs::is_dir(path)) {
-    capture <- capture %||% fs::path_file(path)
-    reference <- reference %||% capture
-    darkspec <- darkspec %||% capture
-    path <- fs::path(path, "01_reflectance.R")
-  }
+  sensor <- match.arg(sensor, c("vnir", "swir"))
 
-  if (is.null(capture)) {
-    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
-  }
+  target <- resolve_target(path, capture, "02_reflectance.R")
 
   use_template(
-    "reflectance_swir.R",
-    path,
-    data = list(capture = capture, reference = reference, darkspec = darkspec),
+    "reflectance.R",
+    target$path,
+    data = list(
+      sensor = sensor,
+      capture = target$capture,
+      reference = reference %||% target$capture,
+      darkspec = darkspec %||% target$capture
+    ),
     if_exists = if_exists
   )
 }
 
 
-#' Use VNIR postprocess template
-#' @param path Destination path (file or directory)
-#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
-#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
+#' Use coregister template
+#'
+#' Warps this sensor's reflectance onto the paired VNIR grid using GCPs
+#' digitised on both previews.
+#'
+#' @inheritParams zar_template_preview
+#' @param vnir_capture Paired VNIR capture directory name. Supplies the target
+#'   GCPs and the target grid.
 #' @export
-zar_template_vnir_postprocess <- function(
+zar_template_coregister <- function(
   path,
-  capture = NULL,
-  if_exists = "error"
-) {
-  if (fs::is_dir(path)) {
-    capture <- capture %||% fs::path_file(path)
-    path <- fs::path(path, "postprocess.R")
-  }
-
-  if (is.null(capture)) {
-    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
-  }
-
-  use_template(
-    "postprocess_vnir.R",
-    path,
-    data = list(capture = capture),
-    if_exists = if_exists
-  )
-}
-
-
-#' Use SWIR postprocess template
-#' @param path Destination path (file or directory)
-#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
-#' @param vnir_capture Paired VNIR capture directory name. Used to locate the
-#'   transect layer computed during VNIR postprocessing.
-#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
-#' @export
-zar_template_swir_postprocess <- function(
-  path,
+  sensor,
   capture = NULL,
   vnir_capture,
   if_exists = "error"
 ) {
-  if (fs::is_dir(path)) {
-    capture <- capture %||% fs::path_file(path)
-    path <- fs::path(path, "postprocess.R")
-  }
+  sensor <- match.arg(sensor, c("vnir", "swir"))
 
-  if (is.null(capture)) {
-    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
-  }
+  target <- resolve_target(path, capture, "03_coregister.R")
 
   use_template(
-    "postprocess_swir.R",
-    path,
-    data = list(capture = capture, vnir_capture = vnir_capture),
+    "coregister.R",
+    target$path,
+    data = list(
+      sensor = sensor,
+      capture = target$capture,
+      vnir_capture = vnir_capture
+    ),
     if_exists = if_exists
   )
 }
 
-#' Use VNIR features template
-#' @param path Destination path (file or directory)
-#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
-#' @param n_components Number of PCA/MNF components to retain. Default 10.
-#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
+
+#' Use postprocess template
+#'
+#' Smooths and prepares derivatives. A co-registered sensor postprocesses the
+#' warped product; otherwise its own reflectance.
+#'
+#' @inheritParams zar_template_preview
+#' @param coregistered Logical. Postprocess the co-registered product from
+#'   [`zar_template_coregister()`] rather than this sensor's own reflectance.
+#'   Default `FALSE`.
 #' @export
-zar_template_vnir_features <- function(
+zar_template_postprocess <- function(
   path,
+  sensor,
   capture = NULL,
-  n_components = 10L,
+  coregistered = FALSE,
   if_exists = "error"
 ) {
-  if (fs::is_dir(path)) {
-    capture <- capture %||% fs::path_file(path)
-    path <- fs::path(path, "features.R")
-  }
+  sensor <- match.arg(sensor, c("vnir", "swir"))
 
-  if (is.null(capture)) {
-    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
-  }
+  target <- resolve_target(path, capture, "04_postprocess.R")
 
   use_template(
-    "features_vnir.R",
-    path,
-    data = list(capture = capture, n_components = n_components),
+    "postprocess.R",
+    target$path,
+    data = list(
+      sensor = sensor,
+      capture = target$capture,
+      source_suffix = if (coregistered) "_coreg" else ""
+    ),
     if_exists = if_exists
   )
 }
 
-#' Use SWIR features template
-#' @param path Destination path (file or directory)
-#' @param capture Capture directory name. If NULL and path is directory, inferred from path.
+
+#' Use features template
+#'
+#' PCA and MNF on the smoothed and continuum-removed products.
+#'
+#' @inheritParams zar_template_preview
 #' @param n_components Number of PCA/MNF components to retain. Default 10.
-#' @param if_exists What to do if file exists: "error", "skip", or "overwrite"
 #' @export
-zar_template_swir_features <- function(
+zar_template_features <- function(
   path,
+  sensor,
   capture = NULL,
   n_components = 10L,
   if_exists = "error"
 ) {
-  if (fs::is_dir(path)) {
-    capture <- capture %||% fs::path_file(path)
-    path <- fs::path(path, "features.R")
-  }
+  sensor <- match.arg(sensor, c("vnir", "swir"))
 
-  if (is.null(capture)) {
-    cli::cli_abort("Must provide {.arg capture} when {.arg path} is a file.")
-  }
+  target <- resolve_target(path, capture, "05_features.R")
 
   use_template(
-    "features_swir.R",
-    path,
-    data = list(capture = capture, n_components = n_components),
+    "features.R",
+    target$path,
+    data = list(
+      sensor = sensor,
+      capture = target$capture,
+      n_components = n_components
+    ),
     if_exists = if_exists
   )
 }
