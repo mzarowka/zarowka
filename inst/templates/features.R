@@ -18,7 +18,9 @@ sensor <- "{{{sensor}}}"
 
 capture <- "{{{capture}}}"
 
-cores <- 4
+# Parallel workers. Defaults to nearly the whole machine, on the assumption that
+# a scanning workstation is dedicated to this; lower it if you need headroom.
+cores <- max(1, parallel::detectCores() - 4)
 
 # Set to TRUE to recompute outputs that already exist on disk
 force_recompute <- FALSE

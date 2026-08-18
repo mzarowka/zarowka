@@ -153,6 +153,37 @@ crop_columns <- \(r) {
   )
 }
 
+## Saturation in the transect ------------------------------------------------
+
+# The frame-wide saturation fraction is dominated by whatever else is in shot —
+# tray, support, labels — and so says little about the sample. The same mask
+# read under the transect is the number that matters, and it only becomes
+# available once the transect exists.
+saturated_path <- products("_saturated.tif")
+
+if (fs::file_exists(saturated_path)) {
+  saturated_pct <- 100 *
+    terra::global(
+      terra::crop(terra::rast(saturated_path), crop_ext),
+      "mean",
+      na.rm = TRUE
+    )[[1]]
+
+  if (saturated_pct > 1) {
+    cli::cli_alert_warning(
+      "{round(saturated_pct, 1)}% of transect pixels are saturated in at least one band. Band depths there are compressed toward the ceiling."
+    )
+  } else {
+    cli::cli_alert_success(
+      "Transect is essentially free of saturation ({round(saturated_pct, 2)}%)."
+    )
+  }
+} else {
+  cli::cli_alert_info(
+    "No saturation mask at {.path {saturated_path}}. Run 01_preview.R to create one."
+  )
+}
+
 # Calculate reflectance ------------------------------------------------------
 
 # Cropping first is what makes in_memory defensible: the transect is a small
