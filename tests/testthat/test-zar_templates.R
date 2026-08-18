@@ -163,7 +163,7 @@ test_that("zar_template_preview includes the raw-data screens", {
     )
 
     expect_true(
-      any(grepl("HSItools::hsi_check_saturation(", lines, fixed = TRUE)),
+      any(grepl("zarowka::hsi_check_saturation(", lines, fixed = TRUE)),
       label = sensor
     )
 
