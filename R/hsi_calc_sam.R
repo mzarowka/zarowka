@@ -60,9 +60,13 @@ hsi_calc_sam <- function(spectra) {
   labels <- colnames(spectra)
 
   tidyr::expand_grid(a = labels, b = labels) |>
-    dplyr::filter(a < b) |>
+    dplyr::filter(.data$a < .data$b) |>
     dplyr::mutate(
-      angle = purrr::map2_dbl(a, b, \(i, j) sam(spectra[, i], spectra[, j]))
+      angle = purrr::map2_dbl(
+        .data$a,
+        .data$b,
+        \(i, j) sam(spectra[, i], spectra[, j])
+      )
     ) |>
-    dplyr::arrange(angle)
+    dplyr::arrange(.data$angle)
 }

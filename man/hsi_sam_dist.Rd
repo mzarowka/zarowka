@@ -7,10 +7,11 @@
 hsi_sam_dist(sam)
 }
 \arguments{
-\item{sam}{\verb{A tibble of pairwise SAM angles as returned by [\\}hsi_calc_sam()\\verb{], with columns \\}a\\verb{, \\}b\\verb{, and \\}angle\\code{.}}
+\item{sam}{A \link[tibble:tibble]{tibble} of pairwise SAM angles as returned by
+\code{\link[=hsi_calc_sam]{hsi_calc_sam()}}, with columns \code{a}, \code{b}, and \code{angle}.}
 }
 \value{
-\verb{A [\\}dist\\verb{][stats::dist] object of pairwise SAM angles.}
+A \code{\link[stats:dist]{dist}} object of pairwise SAM angles.
 }
 \description{
 Convert a SAM angle table to a distance object

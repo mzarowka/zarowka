@@ -2,9 +2,10 @@
 #'
 #' @family Spectral Unmixing
 #'
-#' @param sam `A tibble of pairwise SAM angles as returned by [\`hsi_calc_sam()\`], with columns \`a\`, \`b\`, and \`angle\`.`
+#' @param sam A [tibble][tibble::tibble] of pairwise SAM angles as returned by
+#'   [`hsi_calc_sam()`], with columns `a`, `b`, and `angle`.
 #'
-#' @returns `A [\`dist\`][stats::dist] object of pairwise SAM angles.`
+#' @returns A [`dist`][stats::dist] object of pairwise SAM angles.
 #'
 #' @details
 #' Spectral angle is a metric (symmetric, non-negative, zero for identical
