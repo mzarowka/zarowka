@@ -12,7 +12,9 @@ Imports:
     cli,
     dplyr,
     fs,
+    ggplot2,
     HSItools,
+    nnls,
     pak,
     purrr,
     rlang,
@@ -26,7 +28,8 @@ Depends:
 Config/roxygen2/version: 8.1.0
 Suggests:
     testthat (>= 3.0.0),
-    unmixR
+    unmixR,
+    withr
 Config/testthat/edition: 3
 Remotes:
     mzarowka/HSItools@dev,

@@ -3,3 +3,5 @@
 ^[.]?air[.]toml$
 ^\.vscode$
 ^dev-notes$
+^\.claude$
+^CLAUDE\.md$

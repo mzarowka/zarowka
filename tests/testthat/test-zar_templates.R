@@ -152,6 +152,38 @@ test_that("zar_template_preview selects the sensor-specific template", {
   expect_true(any(grepl("_preview_SWIR_flipped.tif", swir, fixed = TRUE)))
 })
 
+test_that("zar_template_preview includes the raw-data screens", {
+  # Saturation and detection-floor screening can only run before calibration, so
+  # preview is the sole stage that can produce them. Losing them here would
+  # silently reopen the masking gap rather than fail.
+  purrr::walk(c("vnir", "swir"), \(sensor) {
+    lines <- readLines(
+      generate(generators$preview, sensor = sensor),
+      warn = FALSE
+    )
+
+    expect_true(
+      any(grepl("HSItools::hsi_check_saturation(", lines, fixed = TRUE)),
+      label = sensor
+    )
+
+    expect_true(
+      any(grepl("zarowka::hsi_check_signal(", lines, fixed = TRUE)),
+      label = sensor
+    )
+
+    expect_true(
+      any(grepl('products("_saturated.tif")', lines, fixed = TRUE)),
+      label = sensor
+    )
+
+    expect_true(
+      any(grepl('products("_no_signal.tif")', lines, fixed = TRUE)),
+      label = sensor
+    )
+  })
+})
+
 # ── Stage arguments ──────────────────────────────────────────────────────────
 
 test_that("zar_template_postprocess selects the source product", {

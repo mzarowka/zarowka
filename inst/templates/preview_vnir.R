@@ -123,6 +123,26 @@ if (tints$white > tints$scan) {
   )
 }
 
+# Reference screening --------------------------------------------------------
+
+# A saturated white reference corrupts the denominator of every reflectance
+# calculation in the session, and the damage is invisible once calibration has
+# been applied. Catch it here, while re-scanning is still an option.
+whiteref_saturated <- HSItools::hsi_check_saturation(
+  rasters$whiteref,
+  limit = saturation_limit
+) |>
+  terra::global("sum", na.rm = TRUE) |>
+  sum(na.rm = TRUE)
+
+if (whiteref_saturated > 0) {
+  cli::cli_alert_danger(
+    "White reference has {whiteref_saturated} saturated pixel-band{?s}. Re-scan the reference before trusting anything downstream."
+  )
+} else {
+  cli::cli_alert_success("White reference is not saturated.")
+}
+
 # Previews -------------------------------------------------------------------
 
 # Calibration is identical to the full cube in every respect except size: same
@@ -149,6 +169,35 @@ purrr::walk(
   .progress = TRUE
 )
 
+# Masks ----------------------------------------------------------------------
+
+# Both screens need raw digital numbers, so this is the only stage that can run
+# them — everything downstream is calibrated. Each costs one streaming pass and
+# writes a single collapsed layer on the raw grid, so they overlay the previews
+# exactly and can guide where `ends` and `mask` are digitised.
+#
+# They are written, never applied. Masking is a decision: load them in the GIS,
+# and apply with HSItools::hsi_mask() once you have decided what to remove.
+
+HSItools::hsi_check_saturation(
+  rasters$x,
+  limit = saturation_limit,
+  collapse = TRUE,
+  filename = products("_saturated.tif"),
+  overwrite = TRUE
+)
+
+zarowka::hsi_check_signal(
+  rasters$x,
+  # Prefer the matched specimen dark; fall back to the reference session's.
+  darkref = if (is.null(darkspec_rast)) rasters$darkref else darkspec_rast,
+  k = signal_k,
+  fraction = signal_fraction,
+  collapse = TRUE,
+  filename = products("_no_signal.tif"),
+  overwrite = TRUE
+)
+
 # Geopackage -----------------------------------------------------------------
 
 # The raw grid's extent, written as the frame everything else is digitised in.
@@ -162,8 +211,14 @@ terra::ext(rasters$x) |>
   )
 
 # Markup ---------------------------------------------------------------------
-# Open products/<capture>_preview_RGB.tif and the geopackage in a GIS, then
-# digitise into the geopackage:
+# Open in a GIS, on the same pixel grid:
+#
+#   <capture>_preview_RGB.tif    the composite to digitise on
+#   <capture>_saturated.tif      1 = clipped in at least one band
+#   <capture>_no_signal.tif      1 = below the detection floor, e.g. cracks
+#   <capture>.gpkg               where the geometry goes
+#
+# Then digitise into the geopackage:
 #
 #   ends  - two points, core top first, defining the transect axis
 #   gcp   - registration pins, only when this capture will be co-registered
