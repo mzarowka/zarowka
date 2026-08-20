@@ -99,7 +99,9 @@ zar_install <- function() {
     "fields",
     "rcartocolor",
     "spatialsample",
-    "devtools"
+    "devtools",
+    "targets",
+    "tarchetypes"
   )
 
   # Install one at a time; a single vector install has conflicted historically.
