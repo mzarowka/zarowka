@@ -26,6 +26,22 @@ source_suffix <- "{{{source_suffix}}}"
 # need headroom. Set once here and passed to every call — never per call site.
 cores <- max(1, parallel::detectCores(logical = FALSE), na.rm = TRUE)
 
+# terra's own TBB threading is a separate mechanism from `cores`: it is what the
+# built-in focal statistics use, and it defaults to 16 no matter how large the
+# machine is. Raise it to the core count so the median step uses the whole
+# workstation (terra >= 1.9-46; on older terra the median is single-threaded
+# whatever this says).
+#
+# `memmax` caps the block terra reads at once; its 16 GB default is sized for
+# modest machines and forces this transect into 3 blocks where 1 would do.
+# Raising it measured ~20% off the savgol step and ~13% off the chain, plateauing
+# around 64 GB (2026-08-19). Peak R memory tracks the block size — 11 GB at 16,
+# 18 GB at 128 on a 6000-row VNIR subset — so this is a real memory/speed trade,
+# not free. Leave a finite cap rather than removing it: the whole premise of this
+# pipeline is data larger than RAM, and an uncapped block on a raw multi-GB cube
+# is where allocation failures live. Lower it on a smaller machine.
+terra::terraOptions(threads = cores, memmax = 64)
+
 # Path constructors ----------------------------------------------------------
 
 products <- \(suffix) {
@@ -54,8 +70,9 @@ x <- terra::rast(products(paste0(source_suffix, ".tif")))
 # copy behind, which on this shape cost about twice the compute they
 # parallelise (2026-08-18).
 
-# Median smooth. Focal rather than per-pixel, so it takes no `cores` and stays
-# single-threaded — which now makes it the largest step in the chain.
+# Median smooth. Focal rather than per-pixel, so it takes no `cores`; terra
+# parallelises it internally with the TBB threads set above (3.9x on a 6000-row
+# VNIR subset, 2026-08-19), bit-identical to the single-threaded result.
 x <- HSItools::hsi_smooth_median(
   x,
   filename = products("_med.tif"),
