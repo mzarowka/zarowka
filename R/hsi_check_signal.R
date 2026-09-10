@@ -28,7 +28,7 @@
 #' caller.
 #'
 #' @details
-#' This is the floor counterpart of [`hsi_check_saturation()`]. Saturation flags
+#' This is the floor counterpart of [`HSItools::hsi_check_saturation()`]. Saturation flags
 #' pixels that hit the sensor's ceiling; this flags pixels that never rose above
 #' its floor. Both mean the same thing physically — the sensor recorded no
 #' information about the material there — but the threshold differs in kind. The
@@ -75,7 +75,7 @@
 #' bands marks the same bands where signal-to-noise collapses, which is useful
 #' when choosing a trim range.
 #'
-#' @seealso [`hsi_check_saturation()`], [`hsi_calc_snr()`],
+#' @seealso [`HSItools::hsi_check_saturation()`], [`hsi_calc_snr()`],
 #'   [`HSItools::hsi_mask()`]
 #'
 #' @examples

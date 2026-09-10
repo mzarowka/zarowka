@@ -129,7 +129,7 @@ if (tints$white > tints$scan) {
 # A saturated white reference corrupts the denominator of every reflectance
 # calculation in the session, and the damage is invisible once calibration has
 # been applied. Catch it here, while re-scanning is still an option.
-whiteref_saturated <- zarowka::hsi_check_saturation(
+whiteref_saturated <- HSItools::hsi_check_saturation(
   rasters$whiteref,
   limit = saturation_limit
 ) |>
@@ -191,7 +191,7 @@ preview |>
 # They are written, never applied. Masking is a decision: load them in the GIS,
 # and apply with HSItools::hsi_mask() once you have decided what to remove.
 
-zarowka::hsi_check_saturation(
+HSItools::hsi_check_saturation(
   rasters$x,
   limit = saturation_limit,
   collapse = TRUE,

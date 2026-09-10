@@ -48,7 +48,7 @@ one.
 \item \strong{Saturation inflates the ratio.} Clipped values compress the standard
 deviation toward zero, so a saturated band reports a high — in the limit,
 infinite — signal-to-noise. Screen a possibly-saturated capture with
-\code{\link[=hsi_check_saturation]{hsi_check_saturation()}} before trusting these numbers; its per-band counts,
+\code{\link[HSItools:hsi_check_saturation]{HSItools::hsi_check_saturation()}} before trusting these numbers; its per-band counts,
 via \code{terra::global(mask, "sum")}, join this tibble on wavelength.
 }
 
@@ -69,10 +69,9 @@ whiteref_snr <- hsi_calc_snr(whiteref)
 
 }
 \seealso{
-\code{\link[=hsi_check_saturation]{hsi_check_saturation()}}
+\code{\link[HSItools:hsi_check_saturation]{HSItools::hsi_check_saturation()}}
 
 Other HSI Diagnostics:
-\code{\link[=hsi_check_saturation]{hsi_check_saturation()}},
 \code{\link[=hsi_check_signal]{hsi_check_signal()}}
 }
 \concept{HSI Diagnostics}

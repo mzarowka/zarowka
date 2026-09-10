@@ -41,7 +41,7 @@
 #' * **Saturation inflates the ratio.** Clipped values compress the standard
 #'   deviation toward zero, so a saturated band reports a high — in the limit,
 #'   infinite — signal-to-noise. Screen a possibly-saturated capture with
-#'   [`hsi_check_saturation()`] before trusting these numbers; its per-band counts,
+#'   [`HSItools::hsi_check_saturation()`] before trusting these numbers; its per-band counts,
 #'   via `terra::global(mask, "sum")`, join this tibble on wavelength.
 #'
 #' A band with zero variance divides by zero and so yields `Inf` (or `NaN` when
@@ -49,7 +49,7 @@
 #' the affected wavelengths, because such a band sorts *above* every real band
 #' when ranking by signal-to-noise. A fully saturated band is exactly this case.
 #'
-#' @seealso [`hsi_check_saturation()`]
+#' @seealso [`HSItools::hsi_check_saturation()`]
 #'
 #' @examples
 #' \dontrun{

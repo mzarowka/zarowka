@@ -50,7 +50,7 @@ dead-band diagnostics and target-space masking are all derived from it by the
 caller.
 }
 \details{
-This is the floor counterpart of \code{\link[=hsi_check_saturation]{hsi_check_saturation()}}. Saturation flags
+This is the floor counterpart of \code{\link[HSItools:hsi_check_saturation]{HSItools::hsi_check_saturation()}}. Saturation flags
 pixels that hit the sensor's ceiling; this flags pixels that never rose above
 its floor. Both mean the same thing physically — the sensor recorded no
 information about the material there — but the threshold differs in kind. The
@@ -124,11 +124,10 @@ HSItools::hsi_mask(x_reflectance, x_no_signal, inverse = TRUE)
 
 }
 \seealso{
-\code{\link[=hsi_check_saturation]{hsi_check_saturation()}}, \code{\link[=hsi_calc_snr]{hsi_calc_snr()}},
+\code{\link[HSItools:hsi_check_saturation]{HSItools::hsi_check_saturation()}}, \code{\link[=hsi_calc_snr]{hsi_calc_snr()}},
 \code{\link[HSItools:hsi_mask]{HSItools::hsi_mask()}}
 
 Other HSI Diagnostics:
-\code{\link[=hsi_calc_snr]{hsi_calc_snr()}},
-\code{\link[=hsi_check_saturation]{hsi_check_saturation()}}
+\code{\link[=hsi_calc_snr]{hsi_calc_snr()}}
 }
 \concept{HSI Diagnostics}
