@@ -47,7 +47,7 @@ selected pixels, so the reported spectra are reduction-invariant.
 Fit the reduction separately and pass it in, for example
 \code{stats::prcomp(spectra, center = TRUE, scale. = FALSE)}. Keeping it out lets a
 single fit be reused across refits at different \code{n_endmembers} and saved with
-\code{\link[=saveRDS]{saveRDS()}} to survive a session restart. Inspect separation between the
+\code{\link[base:saveRDS]{base::saveRDS()}} to survive a session restart. Inspect separation between the
 returned spectra with \code{\link[=hsi_calc_sam]{hsi_calc_sam()}}.
 
 VCA has a stochastic projection step; call \code{\link[=set.seed]{set.seed()}} before this function

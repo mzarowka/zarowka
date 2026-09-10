@@ -36,7 +36,7 @@
 #' Fit the reduction separately and pass it in, for example
 #' `stats::prcomp(spectra, center = TRUE, scale. = FALSE)`. Keeping it out lets a
 #' single fit be reused across refits at different `n_endmembers` and saved with
-#' [`saveRDS()`] to survive a session restart. Inspect separation between the
+#' [`base::saveRDS()`] to survive a session restart. Inspect separation between the
 #' returned spectra with [`hsi_calc_sam()`].
 #'
 #' VCA has a stochastic projection step; call [`set.seed()`] before this function

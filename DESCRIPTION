@@ -20,7 +20,7 @@ Imports:
     dplyr,
     fs,
     ggplot2,
-    HSItools,
+    HSItools (>= 0.5.3.9003),
     nnls,
     pak,
     purrr,
