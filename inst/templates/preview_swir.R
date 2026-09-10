@@ -24,7 +24,9 @@ darkspec <- "{{{darkspec}}}"
 # Sensor clipping level, in raw DN. The default is the 16-bit ceiling. USER
 # VERIFY against the instrument: this is instrument knowledge and is never
 # inferred from the data. Too low condemns a clean capture, too high hides real
-# clipping.
+# clipping. The honest value usually sits below the ceiling: detector response
+# compresses before it clips, so readings just under the maximum are already
+# unreliable and an exact-ceiling test misses them.
 saturation_limit <- 65535
 
 # Detection floor is mean + k * sd of the dark reference in each band. A pixel
@@ -188,8 +190,16 @@ preview |>
 # writes a single collapsed layer on the raw grid, so they overlay the UNFLIPPED
 # preview exactly and can guide where `ends` and `mask` are digitised.
 #
-# They are written, never applied. Masking is a decision: load them in the GIS,
-# and apply with HSItools::hsi_mask() once you have decided what to remove.
+# 02_reflectance.R applies the saturation screen itself, dropping any pixel that
+# clipped in any band. The signal screen is written and never applied: what
+# counts as too dark is a judgement about the material, so load it in the GIS
+# and apply it with HSItools::hsi_mask() once you have decided what to remove.
+#
+# Applying a screen by hand needs one alignment step. The screens cover the
+# full frame, while 02_reflectance.R windows its product to the transect, so
+# narrow the screen first with terra::window(screen) <- terra::ext(product) or
+# the geometries will not match. Both sit on the raw pixel grid only until the
+# product is flipped or warped, so mask before 03_coregister.R, not after.
 
 HSItools::hsi_check_saturation(
   rasters$x,

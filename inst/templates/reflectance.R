@@ -200,6 +200,8 @@ if (fs::file_exists(saturated_path)) {
     )
   }
 } else {
+  saturated_mask <- NULL
+
   cli::cli_alert_info(
     "No saturation mask at {.path {saturated_path}}. Run 01_preview.R to create one."
   )
@@ -226,15 +228,43 @@ reflectance <- HSItools::hsi_calc_reflectance(
   },
   tint = c(tints$white, tints$scan),
   in_memory = TRUE
-) |>
-  # Written as float. Reflectance legitimately runs negative where dark
-  # subtraction over-corrects at low signal, and an unsigned integer datatype
-  # would clamp those to zero, turning a calibration diagnostic into a
-  # plausible-looking value.
-  terra::writeRaster(
-    filename = products(".tif"),
-    overwrite = TRUE
+)
+
+## Drop the clipped pixels -----------------------------------------------
+
+# A clipped reading carries no information about the specimen. The digital
+# number is pinned at the ceiling, so what survives calibration is the shape
+# of the white reference rather than the sample: a smooth, plausible-looking
+# curve that is pure instrument response.
+#
+# The screen is collapsed, so a pixel that clipped in any band goes entirely.
+# That is the honest reading rather than a conservative one: detector response
+# is already compressed in the bands either side of a clipped run, so the
+# neighbours that sit below the threshold cannot be trusted either, and there
+# is no way to draw the line between contaminated and clean.
+#
+# `inverse = TRUE` reads the screen as a bad-mask: nonzero cells are dropped.
+# It was windowed to `window_ext` above, so its geometry already matches the
+# product. Masking here, while both still sit on the raw pixel grid, is what
+# makes that true — after 03_coregister.R the product is warped and the screen
+# no longer corresponds to it.
+if (!is.null(saturated_mask)) {
+  reflectance <- HSItools::hsi_mask(
+    reflectance,
+    mask = saturated_mask,
+    inverse = TRUE
   )
+}
+
+# Written as float. Reflectance legitimately runs negative where dark
+# subtraction over-corrects at low signal, and an unsigned integer datatype
+# would clamp those to zero, turning a calibration diagnostic into a
+# plausible-looking value.
+reflectance <- terra::writeRaster(
+  reflectance,
+  filename = products(".tif"),
+  overwrite = TRUE
+)
 
 # Standalone SWIR ------------------------------------------------------------
 # A SWIR capture with no paired VNIR never reaches co-registration, so nothing
