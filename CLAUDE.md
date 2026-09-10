@@ -1,6 +1,6 @@
 # zarowka Development Guidelines (CLAUDE.md)
 
-> **Version 1.0.0 — 2026-07-15.** zarowka is the **front-end scaffolding and
+> **Version 1.1.0 — 2026-09-10.** zarowka is the **front-end scaffolding and
 > experimental layer** of the HSItools ecosystem. This file carries only what is
 > specific to *this* repo. All shared house style — language baseline, function
 > structure, roxygen, testing, calibration physics, unmixing restraints — is
@@ -131,10 +131,11 @@ Current templates and their generators:
 
 | Template file | Generator | Output name |
 |---|---|---|
-| `reflectance_vnir.R` / `reflectance_swir.R` | `zar_template_vnir()` / `zar_template_swir()` | `01_reflectance.R` |
-| `coregister_swir.R` | `zar_template_swir_coregister()` | `02_coregister.R` |
-| `postprocess_vnir.R` / `postprocess_swir.R` | `zar_template_vnir_postprocess()` / `zar_template_swir_postprocess()` | `postprocess.R` |
-| `features_vnir.R` / `features_swir.R` | `zar_template_vnir_features()` / `zar_template_swir_features()` | `features.R` |
+| `preview_vnir.R` / `preview_swir.R` | `zar_template_preview(sensor =)` | `01_preview.R` |
+| `reflectance.R` | `zar_template_reflectance()` | `02_reflectance.R` |
+| `coregister.R` | `zar_template_coregister()` | `03_coregister.R` |
+| `postprocess.R` | `zar_template_postprocess()` | `04_postprocess.R` |
+| `features.R` | `zar_template_features()` | `05_features.R` |
 
 Generator convention: when `path` is a directory, the capture name is inferred from
 the directory and the output filename is fixed; when `path` is a file, `capture`
@@ -189,6 +190,13 @@ where zarowka genuinely differs or adds:
    moved there 2026-07-18 — never in package source or this file. The `dev-notes/`
    entries in `.gitignore`/`.Rbuildignore` stay as a safety net; the folder itself
    no longer exists here.
+9. **Templates cut a raw capture with `terra::window()`, never `terra::crop()`.**
+   A crop that materialises reserves the datatype maximum as NoData and silently
+   turns saturated readings into `NA`; a window is lazy and writes nothing.
+   Reference rasters are windowed in the column direction only, since
+   `hsi_calc_reflectance()` collapses them to per-column means and sweeps those
+   across the specimen's columns. Reasoning and measurements in
+   `../HSItools/CLAUDE.md` §2.
 
 ---
 
@@ -212,6 +220,15 @@ Before proposing any zarowka code, confirm:
 
 ## Changelog
 
+- **1.1.0 (2026-09-10)** — §3 gains rule 9: templates cut a raw capture with
+  `terra::window()`, never `terra::crop()`, references in the column direction only
+  (`../HSItools/CLAUDE.md` §2 carries the reasoning and the measurements). Applied in
+  `inst/templates/reflectance.R` the same day; validation in
+  `hsi_development/zarowka/2026-09-09_window-reflectance-gkut-validation-opus.md`.
+  §2's template table corrected: it listed sensor-split `reflectance_*.R` /
+  `postprocess_*.R` / `features_*.R` files and generators that no longer exist. The
+  real inventory is six templates behind five `zar_template_*()` generators emitting
+  `01_preview.R` through `05_features.R`.
 - **1.0.0 (2026-07-15)** — Initial zarowka CLAUDE.md, derived from `../HSItools/CLAUDE.md`
   v1.8.0. Scopes this file to zarowka-specific facts (two-layer `hsi_*`/`zar_*` source,
   templates in `inst/templates/`, unmixR positioning, mirrored testdata) and defers all
