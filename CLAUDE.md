@@ -1,6 +1,6 @@
 # zarowka Development Guidelines (CLAUDE.md)
 
-> **Version 1.1.0 — 2026-09-10.** zarowka is the **front-end scaffolding and
+> **Version 1.2.0 — 2026-09-10.** zarowka is the **front-end scaffolding and
 > experimental layer** of the HSItools ecosystem. This file carries only what is
 > specific to *this* repo. All shared house style — language baseline, function
 > structure, roxygen, testing, calibration physics, unmixing restraints — is
@@ -96,7 +96,7 @@ promotion candidates — hold them to HSItools standard.
 Current inventory (all `@family HSI Unmixing` / extraction / QC): `hsi_extract_spectra()`,
 `hsi_calc_endmembers()` (VCA-seeded N-FINDR via unmixR), `hsi_calc_abundance()`
 (nnls), `hsi_calc_sam()`, `hsi_sam_dist()`, `hsi_apply_reduction()`,
-`hsi_plot_endmembers()`, `hsi_calc_snr()`, `hsi_check_saturation()`. These realize
+`hsi_plot_endmembers()`, `hsi_calc_snr()`, `hsi_check_signal()`. These realize
 the unmixing/big-raster workflow whose hard-won restraints are documented in
 `../HSItools/CLAUDE.md` §7 — read §7 before touching any of them. Note the §3.2
 dots-check **exemption** covers `hsi_apply_reduction()` and any function that hands
@@ -197,6 +197,16 @@ where zarowka genuinely differs or adds:
    `hsi_calc_reflectance()` collapses them to per-column means and sweeps those
    across the specimen's columns. Reasoning and measurements in
    `../HSItools/CLAUDE.md` §2.
+10. **The saturation screen is applied; the signal screen is not.**
+    `02_reflectance.R` masks the calibrated product with the collapsed saturation
+    screen, dropping any pixel that clipped in any band, on the raw pixel grid and
+    before `03_coregister.R`. The signal screen is written and left alone: what
+    counts as too dark is a judgement about the material, so the user applies it
+    in the GIS. Physics and composition rule in `../HSItools/CLAUDE.md` §6.6.
+11. **Enumerated strings use `rlang::arg_match()`.** The house validator
+    `check_one_of()` is internal to HSItools and unreachable without `:::`, so the
+    sanctioned rlang carve-out (`../HSItools/CLAUDE.md` §3.3) applies here.
+    Never `match.arg()`, and never a house duplicate.
 
 ---
 
@@ -220,6 +230,13 @@ Before proposing any zarowka code, confirm:
 
 ## Changelog
 
+- **1.2.0 (2026-09-10)** — `hsi_check_saturation()` promoted to HSItools
+  (0.5.3.9003), so it leaves the §2 inventory and the templates call it through that
+  namespace; `DESCRIPTION` gains the matching version floor. §3 gains rule 10 (the
+  saturation screen is applied by `02_reflectance.R`, the signal screen is left to
+  the user) and rule 11 (enumerated strings use `rlang::arg_match()`, since
+  `check_one_of()` is internal to HSItools; the seven `match.arg()` calls were
+  converted). Saturation physics lives in `../HSItools/CLAUDE.md` §6.6.
 - **1.1.0 (2026-09-10)** — §3 gains rule 9: templates cut a raw capture with
   `terra::window()`, never `terra::crop()`, references in the column direction only
   (`../HSItools/CLAUDE.md` §2 carries the reasoning and the measurements). Applied in

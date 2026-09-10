@@ -11,7 +11,7 @@ use_template <- function(
   data = list(),
   if_exists = "error"
 ) {
-  if_exists <- match.arg(if_exists, c("error", "skip", "overwrite"))
+  if_exists <- rlang::arg_match(if_exists, c("error", "skip", "overwrite"))
 
   # Sanitise path-like variables to bare names
   path_like <- c("capture", "reference", "darkspec", "vnir_capture")
@@ -114,7 +114,7 @@ zar_template_preview <- function(
   darkspec = capture,
   if_exists = "error"
 ) {
-  sensor <- match.arg(sensor, c("vnir", "swir"))
+  sensor <- rlang::arg_match(sensor, c("vnir", "swir"))
 
   target <- resolve_target(path, capture, "01_preview.R")
 
@@ -146,7 +146,7 @@ zar_template_reflectance <- function(
   darkspec = capture,
   if_exists = "error"
 ) {
-  sensor <- match.arg(sensor, c("vnir", "swir"))
+  sensor <- rlang::arg_match(sensor, c("vnir", "swir"))
 
   target <- resolve_target(path, capture, "02_reflectance.R")
 
@@ -180,7 +180,7 @@ zar_template_coregister <- function(
   vnir_capture,
   if_exists = "error"
 ) {
-  sensor <- match.arg(sensor, c("vnir", "swir"))
+  sensor <- rlang::arg_match(sensor, c("vnir", "swir"))
 
   target <- resolve_target(path, capture, "03_coregister.R")
 
@@ -214,7 +214,7 @@ zar_template_postprocess <- function(
   coregistered = FALSE,
   if_exists = "error"
 ) {
-  sensor <- match.arg(sensor, c("vnir", "swir"))
+  sensor <- rlang::arg_match(sensor, c("vnir", "swir"))
 
   target <- resolve_target(path, capture, "04_postprocess.R")
 
@@ -245,7 +245,7 @@ zar_template_features <- function(
   n_components = 10L,
   if_exists = "error"
 ) {
-  sensor <- match.arg(sensor, c("vnir", "swir"))
+  sensor <- rlang::arg_match(sensor, c("vnir", "swir"))
 
   target <- resolve_target(path, capture, "05_features.R")
 

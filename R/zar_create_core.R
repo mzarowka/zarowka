@@ -9,7 +9,7 @@ zar_create_core <- function(
   path,
   if_exists = "error"
 ) {
-  if_exists <- match.arg(if_exists, c("error", "skip"))
+  if_exists <- rlang::arg_match(if_exists, c("error", "skip"))
 
   core_path <- fs::path(path, core)
 
