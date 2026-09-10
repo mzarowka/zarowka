@@ -1,5 +1,5 @@
 # REFLECTANCE ----------------------------------------------------------------
-# Calibrate the cube, cropped to the transect digitised on the preview
+# Calibrate the cube, windowed to the transect digitised on the preview
 # Always open at the core level, rather than for example a site level
 # Run 01_preview.R and digitise `ends` before running this
 
@@ -26,7 +26,7 @@ darkspec <- "{{{darkspec}}}"
 # mm, compute round(width_mm / mm_per_pixel) for this capture.
 width_px <- 100
 
-# Pixels of overhang added to the crop. Leave at 0 for a sensor that is not
+# Pixels of overhang added to the window. Leave at 0 for a sensor that is not
 # co-registered. A sensor that will be warped onto another's grid needs a few
 # pixels beyond the target edge, or resampling leaves NA borders.
 margin_px <- 0
@@ -134,23 +134,40 @@ transect <- HSItools::hsi_find_extent(
   overwrite = TRUE
 )
 
-# Crop -----------------------------------------------------------------------
+# Window ---------------------------------------------------------------------
 
-crop_ext <- terra::ext(transect) + margin_px
+window_ext <- terra::ext(transect) + margin_px
 
-# The specimen crops in both directions.
-x_crop <- terra::crop(rasters$x, crop_ext)
+# The region of interest is set with terra::window(), never terra::crop(). A
+# crop of a raw capture may materialise to a temporary file, and terra writes
+# that copy in the source integer datatype, reserving the datatype maximum as
+# the NoData value. Every genuinely saturated reading is then read back as NA,
+# and whether it happens at all depends on terra's memory budget, so the same
+# script can produce different products on different machines. A window is
+# lazy: nothing is read or written until a downstream function reads the ROI
+# straight from the raw file. A physical raw subset, if one is ever needed,
+# must be written with a float datatype (e.g. `datatype = "FLT4S"`).
 
-# The references crop in the X DIRECTION ONLY. hsi_calc_reflectance() collapses
-# each reference to a per-column mean and sweeps it across the specimen's
-# columns, so the two column ranges must agree exactly or the sweep recycles and
-# calibrates each column against the wrong reference. The reference rows are a
-# separate scan and are averaged away regardless, so they are left alone.
-crop_columns <- \(r) {
-  terra::crop(
-    r,
-    terra::ext(crop_ext$xmin, crop_ext$xmax, terra::ymin(r), terra::ymax(r))
+# The specimen is windowed in both directions.
+x_win <- rasters$x
+
+terra::window(x_win) <- window_ext
+
+# The references are windowed in the X DIRECTION ONLY. hsi_calc_reflectance()
+# collapses each reference to a per-column mean and sweeps it across the
+# specimen's columns, so the two column ranges must agree exactly or the sweep
+# recycles and calibrates each column against the wrong reference. The reference
+# rows are a separate scan and are averaged away regardless, so they are left
+# alone.
+window_columns <- \(r) {
+  terra::window(r) <- terra::ext(
+    window_ext$xmin,
+    window_ext$xmax,
+    terra::ymin(r),
+    terra::ymax(r)
   )
+
+  r
 }
 
 ## Saturation in the transect ------------------------------------------------
@@ -162,9 +179,13 @@ crop_columns <- \(r) {
 saturated_path <- products("_saturated.tif")
 
 if (fs::file_exists(saturated_path)) {
+  saturated_mask <- terra::rast(saturated_path)
+
+  terra::window(saturated_mask) <- window_ext
+
   saturated_pct <- 100 *
     terra::global(
-      terra::crop(terra::rast(saturated_path), crop_ext),
+      saturated_mask,
       "mean",
       na.rm = TRUE
     )[[1]]
@@ -186,18 +207,23 @@ if (fs::file_exists(saturated_path)) {
 
 # Calculate reflectance ------------------------------------------------------
 
-# Cropping first is what makes in_memory defensible: the transect is a small
-# fraction of the swath, so the cube no longer has to be converted whole.
+# Windowing first is what makes in_memory defensible: only the transect is read
+# from the raw file, a small fraction of the swath, so the cube no longer has to
+# be converted whole.
 #
 # The result is NOT flipped, whatever the sensor. Orientation is corrected by
 # co-registration in 03_coregister.R, whose fitted polynomial carries the mirror
 # as a negative x scale. Flipping here would leave the digitised geometry and
 # the raster in different frames.
 reflectance <- HSItools::hsi_calc_reflectance(
-  x = x_crop,
-  whiteref = crop_columns(rasters$whiteref),
-  darkref = crop_columns(rasters$darkref),
-  darkspec = if (is.null(darkspec_rast)) NULL else crop_columns(darkspec_rast),
+  x = x_win,
+  whiteref = window_columns(rasters$whiteref),
+  darkref = window_columns(rasters$darkref),
+  darkspec = if (is.null(darkspec_rast)) {
+    NULL
+  } else {
+    window_columns(darkspec_rast)
+  },
   tint = c(tints$white, tints$scan),
   in_memory = TRUE
 ) |>
@@ -213,7 +239,7 @@ reflectance <- HSItools::hsi_calc_reflectance(
 # Standalone SWIR ------------------------------------------------------------
 # A SWIR capture with no paired VNIR never reaches co-registration, so nothing
 # corrects its mirrored orientation. Un-comment to flip it here. This is safe
-# only as the very last step: the transect crop is already applied, and the one
+# only as the very last step: the transect window is already applied, and the one
 # remaining consumer of `ends` is hsi_set_extent(), which reads y alone.
 #
 # reflectance |>

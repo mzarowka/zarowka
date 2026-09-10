@@ -31,16 +31,7 @@ cores <- max(1, parallel::detectCores(logical = FALSE), na.rm = TRUE)
 # machine is. Raise it to the core count so the median step uses the whole
 # workstation (terra >= 1.9-46; on older terra the median is single-threaded
 # whatever this says).
-#
-# `memmax` caps the block terra reads at once; its 16 GB default is sized for
-# modest machines and forces this transect into 3 blocks where 1 would do.
-# Raising it measured ~20% off the savgol step and ~13% off the chain, plateauing
-# around 64 GB (2026-08-19). Peak R memory tracks the block size — 11 GB at 16,
-# 18 GB at 128 on a 6000-row VNIR subset — so this is a real memory/speed trade,
-# not free. Leave a finite cap rather than removing it: the whole premise of this
-# pipeline is data larger than RAM, and an uncapped block on a raw multi-GB cube
-# is where allocation failures live. Lower it on a smaller machine.
-terra::terraOptions(threads = cores, memmax = 64)
+terra::terraOptions(threads = cores)
 
 # Path constructors ----------------------------------------------------------
 
