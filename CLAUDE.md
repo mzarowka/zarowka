@@ -1,6 +1,6 @@
 # zarowka Development Guidelines (CLAUDE.md)
 
-> **Version 1.2.0 — 2026-09-10.** zarowka is the **front-end scaffolding and
+> **Version 1.3.0 — 2026-09-11.** zarowka is the **front-end scaffolding and
 > experimental layer** of the HSItools ecosystem. This file carries only what is
 > specific to *this* repo. All shared house style — language baseline, function
 > structure, roxygen, testing, calibration physics, unmixing restraints — is
@@ -26,8 +26,10 @@ outrank everything below. In summary:
 3. **No speculative generalization / no hardcoding.** Simple, reusable, atomic functions.
 4. **Do not settle open design questions unilaterally.** Ask.
 5. **Verification runs where R lives.** If this session can execute in the repo:
-   after each change run `Rscript -e "devtools::test()"` (plus `devtools::document()`
-   when a roxygen block or signature changed), show the output, wait for go/no-go.
+   after each change run the focused tests for the touched file,
+   `devtools::test_active_file("R/<name>.R")` (plus `devtools::document()` when a
+   roxygen block or signature changed), show the output, wait for go/no-go; run the
+   full `devtools::test()` before handing work back. Commands: §2.
    If it cannot execute R, hand off patches; Maury verifies locally. Never claim a
    verification step ran unless its output was shown or Maury reported it.
 6. **Git belongs to Maury.** Read-only inspection (`git status`/`diff`/`log`) only;
@@ -75,9 +77,17 @@ Standard R package. All commands run from the package root in R:
 ```r
 devtools::load_all()          # load for interactive dev
 devtools::test()              # full testthat 3e suite
+devtools::test(filter = "hsi_check_signal")           # test files matching a regex
+devtools::test_active_file("R/hsi_check_signal.R")    # tests for one source file (R/x.R -> tests/testthat/test-x.R)
+devtools::test_active_file("R/hsi_check_signal.R", desc = "<exact test name>")  # a single test, no regex
 devtools::document()          # regenerate NAMESPACE + man/*.Rd after any roxygen change
 devtools::check()             # full R CMD check
 ```
+
+Always pass an explicit path to `test_active_file()`: without one it targets the
+file open in the IDE editor, which an agent session does not have. The Windows
+`Rscript -e` segfault fallback in `../HSItools/CLAUDE.md` (Repo map → Commands)
+applies here.
 
 Formatting is owned by **air** (`air.toml` at the repo root marks the project). Run
 `air format` on any file you edit before handing work back. Never hand-format.
@@ -207,6 +217,12 @@ where zarowka genuinely differs or adds:
     `check_one_of()` is internal to HSItools and unreachable without `:::`, so the
     sanctioned rlang carve-out (`../HSItools/CLAUDE.md` §3.3) applies here.
     Never `match.arg()`, and never a house duplicate.
+12. **Release-surface rules from HSItools do not apply here.** zarowka keeps no
+    `NEWS.md` and no `_pkgdown.yml`, so the NEWS and pkgdown rules
+    (`../HSItools/CLAUDE.md` §9, §4.8) are dormant until those files exist. The
+    deprecation workflow (§3.12 there) does not apply either: zarowka functions are
+    experimental, and promotion moves a function to HSItools without a deprecation
+    cycle here.
 
 ---
 
@@ -223,13 +239,21 @@ Before proposing any zarowka code, confirm:
 4. Touching unmixing? Re-read `../HSItools/CLAUDE.md` §7 (bind-first, over-specify-then-prune,
    PCA-over-MNF, mask-first) and guard `unmixR` with `check_installed()`.
 5. Domain/vendor specificity going into an `hsi_*` contract? Move it to a template instead.
-6. Tests per `../HSItools/CLAUDE.md` §5; fixtures from the mirrored `inst/testdata/` chain.
+6. Tests per `../HSItools/CLAUDE.md` §5 (no code outside `test_that()`, fixtures in
+   `helper-*.R`, specific expectations); fixtures from the mirrored `inst/testdata/` chain.
 7. Touching anything in `../HSItools/CLAUDE.md` §10 (open design questions)? Stop and ask.
 
 ---
 
 ## Changelog
 
+- **1.3.0 (2026-09-11)** — Follows `../HSItools/CLAUDE.md` 1.12.0 (tidyverse agent
+  guidance from usethis 3.2.2). §0 rule 5 runs focused tests per change and the full
+  suite before handback; §2 gains the focused test commands, the path-less
+  `test_active_file()` warning and a pointer to the Windows `Rscript -e` fallback.
+  §3 gains rule 12: NEWS and pkgdown rules are dormant (no `NEWS.md`/`_pkgdown.yml`),
+  and the deprecation workflow does not apply to experimental functions or
+  promotion. §4 checklist item 6 picks up the new test rules.
 - **1.2.0 (2026-09-10)** — `hsi_check_saturation()` promoted to HSItools
   (0.5.3.9003), so it leaves the §2 inventory and the templates call it through that
   namespace; `DESCRIPTION` gains the matching version floor. §3 gains rule 10 (the
