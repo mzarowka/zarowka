@@ -24,7 +24,7 @@ Imports:
     nnls,
     pak,
     purrr,
-    rlang,
+    rlang (>= 1.2.0),
     terra,
     tibble,
     tidyr,
