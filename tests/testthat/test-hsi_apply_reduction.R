@@ -6,13 +6,6 @@
 # classes abort.
 
 ## Setup ----
-test_reflectance <- terra::rast(
-  system.file(
-    package = "HSItools",
-    "testdata/products/REFLECTANCE_testdata.tif"
-  )
-)
-
 # Build a synthetic scene with known values on the fixture geometry. The
 # recovery test below compares hsi_apply_reduction() against a direct
 # stats::predict() on the same training matrix, so the model must be fit on

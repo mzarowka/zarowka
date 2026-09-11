@@ -6,13 +6,6 @@
 # and are never negative; band-count mismatch errors.
 
 ## Setup ----
-test_reflectance <- terra::rast(
-  system.file(
-    package = "HSItools",
-    "testdata/products/REFLECTANCE_testdata.tif"
-  )
-)
-
 # Three synthetic endmembers spanning the fixture's band count. Distinct,
 # well-conditioned spectra so the linear system is solvable.
 n_bands <- terra::nlyr(test_reflectance)

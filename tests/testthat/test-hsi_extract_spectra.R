@@ -11,12 +11,6 @@
 #   - Fully-NA (background) pixels are dropped
 
 ## Setup ----
-test_reflectance <- terra::rast(
-  system.file(
-    package = "HSItools",
-    "testdata/products/REFLECTANCE_testdata.tif"
-  )
-)
 
 n_cells <- terra::ncell(test_reflectance)
 n_bands <- terra::nlyr(test_reflectance)

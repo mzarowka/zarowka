@@ -17,14 +17,14 @@
 # the processing level this function is meant for.
 test_capture <- terra::rast(
   system.file(
-    package = "HSItools",
+    package = "zarowka",
     "testdata/capture/testdata.tif"
   )
 )
 
 test_dark <- terra::rast(
   system.file(
-    package = "HSItools",
+    package = "zarowka",
     "testdata/capture/DARKREF_testdata.tif"
   )
 )

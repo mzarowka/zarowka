@@ -10,13 +10,6 @@
 #   - Errors when band names are not parseable as numeric wavelengths
 
 ## Setup ----
-test_reflectance <- terra::rast(
-  system.file(
-    package = "HSItools",
-    "testdata/products/REFLECTANCE_testdata.tif"
-  )
-)
-
 # Degenerate rasters are derived with terra::setValues(), which returns a new
 # raster. SpatRaster is not deep-copied by `<-`, so mutating a band in place
 # would corrupt the shared fixture.
