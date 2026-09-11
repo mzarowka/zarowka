@@ -54,6 +54,12 @@ if (force_recompute || !fs::file_exists(products("_pca_sg0.tif"))) {
 
     pca_model <- terra::prcomp(x, center = TRUE, scale. = TRUE, retx = FALSE)
 
+    # Project only the retained components
+    pca_model$rotation <- pca_model$rotation[,
+      seq_len(n_components),
+      drop = FALSE
+    ]
+
     pca_sg0 <- terra::predict(x, pca_model, index = seq_len(n_components))
 
     names(pca_sg0) <- paste0("PC", seq_len(n_components))
@@ -81,6 +87,11 @@ if (force_recompute || !fs::file_exists(products("_pca_sg1.tif"))) {
     names(x) <- make.names(names(x))
 
     pca_model <- terra::prcomp(x, center = TRUE, scale. = TRUE, retx = FALSE)
+
+    pca_model$rotation <- pca_model$rotation[,
+      seq_len(n_components),
+      drop = FALSE
+    ]
 
     pca_sg1 <- terra::predict(x, pca_model, index = seq_len(n_components))
 
